@@ -1,0 +1,32 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(59, 36, 18, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 100;
+  animation: fade-in 120ms steps(3) both;
+}
+
+.dialog {
+  width: 100%;
+  max-width: 400px;
+  max-height: calc(100% - 32px);
+  overflow-y: auto;
+  animation: pop-in 180ms steps(4) both;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}

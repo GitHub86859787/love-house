@@ -1,0 +1,82 @@
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px;
+  background: var(--sky-light);
+  border: 2px solid var(--wood-light);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.groupHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.groupLabel {
+  font-size: var(--fs-sm);
+  color: var(--ink-soft);
+  width: 40px;
+  flex: none;
+}
+
+.partName {
+  flex: 1;
+  text-align: center;
+  font-size: var(--fs-sm);
+  line-height: 32px;
+  background: var(--white);
+  border: 2px solid var(--wood-light);
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-left: 48px;
+  align-items: center;
+}
+
+.swatch {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--wood-light);
+  cursor: pointer;
+  padding: 0;
+}
+
+.swatchActive {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 2px var(--gold);
+}
+
+.custom {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  border: 2px dashed var(--wood-light);
+  background: linear-gradient(135deg, #e6323c, #f5c542, #6daa2c, #6fb7e8);
+  overflow: hidden;
+}
+
+.custom input {
+  position: absolute;
+  inset: -8px;
+  width: 200%;
+  height: 200%;
+  opacity: 0;
+  cursor: pointer;
+}

@@ -1,0 +1,32 @@
+.bar {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+.hearts {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* 心图 16 宽但两侧各 1 列透明，相邻心叠住透明列，视觉间距刚好 */
+.heart {
+  display: inline-block;
+  transform-origin: 50% 60%;
+  margin-right: calc(var(--overlap) * -1);
+}
+
+.heart:last-child {
+  margin-right: 0;
+}
+
+.bounce {
+  animation: heart-bounce 500ms steps(6) both;
+}
+
+.text {
+  margin-left: 8px;
+  font-size: var(--fs-sm);
+  color: var(--ink-soft);
+}

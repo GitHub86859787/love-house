@@ -1,0 +1,139 @@
+.scene {
+  position: relative;
+  height: 224px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 4px solid var(--wood-dark);
+  box-shadow: inset 0 0 0 4px var(--wood-light);
+  background: linear-gradient(to bottom, var(--sky-c) 0, var(--sky-c) 72px, #fff8e7 72px, #fff8e7 76px, var(--grass-c) 76px, var(--grass-c) 160px, var(--path-c) 160px, var(--path-c) 184px, var(--grass-dark-c) 184px, var(--grass-dark-c) 100%);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.scene::-webkit-scrollbar {
+  display: none;
+}
+
+.track {
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 24px 0 0;
+  min-width: 100%;
+  width: max-content;
+}
+
+.gate {
+  position: relative;
+  width: 72px;
+  flex: none;
+  height: 100%;
+}
+
+.gateSprite {
+  position: absolute;
+  left: 16px;
+  bottom: 40px;
+}
+
+.gateLabel {
+  position: absolute;
+  left: 8px;
+  bottom: 12px;
+  font-size: var(--fs-sm);
+  color: var(--white);
+  text-shadow: 1px 1px 0 var(--ink);
+}
+
+.slot {
+  position: relative;
+  width: 112px;
+  height: 100%;
+  flex: none;
+  cursor: pointer;
+}
+
+.house {
+  position: absolute;
+  left: 24px;
+  top: 32px;
+}
+
+.villager {
+  position: absolute;
+  left: 32px;
+  bottom: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 80ms steps(2);
+}
+
+.slot:active .villager {
+  transform: translateY(2px);
+}
+
+.bob {
+  animation: idle-bob 1200ms steps(2) infinite;
+}
+
+.name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 20px;
+  text-align: center;
+  font-size: var(--fs-sm);
+  line-height: 16px;
+  color: var(--white);
+  text-shadow:
+    1px 1px 0 var(--ink),
+    -1px 1px 0 var(--ink),
+    1px -1px 0 var(--ink),
+    -1px -1px 0 var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 4px;
+}
+
+.hearts {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 4px;
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+}
+
+.bubble {
+  position: absolute;
+  left: 56px;
+  bottom: 96px;
+  animation: idle-bob 1000ms steps(2) infinite;
+}
+
+.tree {
+  position: absolute;
+  bottom: 64px;
+}
+
+.bush {
+  position: absolute;
+  bottom: 40px;
+}
+
+.empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+  text-shadow: 1px 1px 0 var(--ink);
+  font-size: var(--fs-md);
+  padding: 0 24px;
+  text-align: center;
+}

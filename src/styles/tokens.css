@@ -1,0 +1,41 @@
+/* 人情村设计令牌：所有颜色 / 间距 / 字号统一从这里取 */
+:root {
+  --wood-dark: #5c3a1e;
+  --wood-light: #8b5a2b;
+  --wood-shadow: #3b2412;
+  --paper: #f4e4bc;
+  --paper-dark: #e8d5a3;
+  --paper-deep: #d9c08a;
+  --ink: #3b2412;
+  --ink-soft: #7a5a3a;
+  --heart: #e6323c;
+  --heart-dark: #a8161f;
+  --heart-empty: #b9a988;
+  --gold: #f5c542;
+  --gold-dark: #b8891c;
+  --grass: #6daa2c;
+  --grass-dark: #4f8a1e;
+  --sky: #6fb7e8;
+  --sky-light: #b6e0f7;
+  --danger: #c23b3b;
+  --white: #fff8e7;
+
+  --grid: 4px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --font-pixel: 'FusionPixel', 'Zpix', 'Microsoft YaHei', monospace;
+  --fs-sm: 12px;
+  --fs-md: 16px;
+  --fs-lg: 20px;
+  --fs-xl: 24px;
+  --fs-xxl: 32px;
+
+  --nav-height: 64px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}

@@ -1,0 +1,30 @@
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 4px solid var(--wood-dark);
+  margin-bottom: 12px;
+  overflow-x: auto;
+}
+
+.tab {
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0 8px;
+  background: var(--paper-dark);
+  border: 2px solid var(--wood-light);
+  border-bottom: none;
+  color: var(--ink-soft);
+  font-size: var(--fs-sm);
+  line-height: 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.active {
+  background: var(--wood-dark);
+  border-color: var(--wood-dark);
+  color: var(--paper);
+}

@@ -1,0 +1,74 @@
+.app {
+  min-height: 100%;
+  background: var(--paper-deep);
+  background-image:
+    linear-gradient(rgba(59, 36, 18, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59, 36, 18, 0.04) 1px, transparent 1px);
+  background-size: 16px 16px;
+  padding-top: var(--safe-top);
+  padding-bottom: calc(var(--nav-height) + var(--safe-bottom));
+}
+
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 12px 12px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: fade-in 120ms steps(3) both;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+}
+
+.header h1 {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 2px 2px 0 var(--paper);
+}
+
+.nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(var(--nav-height) + var(--safe-bottom));
+  padding-bottom: var(--safe-bottom);
+  background: var(--wood-dark);
+  border-top: 4px solid var(--wood-light);
+  box-shadow: inset 0 4px 0 var(--wood-shadow);
+  display: flex;
+  justify-content: space-around;
+  align-items: stretch;
+  z-index: 50;
+}
+
+.navItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--paper-dark);
+  font-size: var(--fs-sm);
+  line-height: 16px;
+  opacity: 0.7;
+}
+
+.navActive {
+  opacity: 1;
+  color: var(--gold);
+}
+
+.navActive img {
+  animation: idle-bob 800ms steps(2) infinite;
+}
