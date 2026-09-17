@@ -1,74 +1,14 @@
 import { db } from './db';
 import type { FortuneCache, Person, Preference } from './types';
 import { uid } from '@/lib/id';
-import type { FortuneData, Reading, Synastry } from '@/fortune/schemas';
-import { currentBasis } from '@/fortune/api';
+import type { FortuneData } from '@/fortune/schemas';
+import type { BookChapter, ChapterSchema, FortuneBook, GuideSchema } from '@/fortune/book';
+import { bookHash, currentBasis, guideSourceStamp } from '@/fortune/book';
+import type { ChapterKey } from '@/config/fortune-book';
+import type { z } from 'zod';
 
 export function fortuneData(p: Person): FortuneData | null {
   return (p.fortune?.data as FortuneData | undefined) ?? null;
-}
-
-/** 保存解读；推测喜好自动写入「占卜师的猜测」分组（source = fortune） */
-export async function saveReading(person: Person, reading: Reading, inputHash: string): Promise<void> {
-  const prev = person.fortune;
-  const now = Date.now();
-  const data: FortuneData = { reading: { ...reading, traitVerdicts: reading.traits.map(() => null) }, likesWritten: true };
-  // 旧的猜测清掉，换成新的
-  const kept = person.preferences.filter((p) => p.source !== 'fortune');
-  const rejected = new Set(prev?.rejected ?? []);
-  const guesses: Preference[] = reading.guessedLikes
-    .filter((g) => !rejected.has(g.name))
-    .map((g) => ({ id: uid(), name: g.name, category: g.category, tier: g.tier, note: g.basis, source: 'fortune', createdAt: now }));
-  const fortune: FortuneCache = {
-    inputHash,
-    basis: currentBasis(person),
-    createdAt: now,
-    data,
-    rejected: prev?.rejected ?? [],
-    hits: prev?.hits ?? 0,
-    misses: prev?.misses ?? 0,
-    lastAskedAt: now,
-  };
-  // 保留合盘缓存
-  const prevData = prev?.data as FortuneData | undefined;
-  if (prevData?.synastry) data.synastry = prevData.synastry;
-  await db.persons.update(person.id, { fortune, preferences: [...kept, ...guesses], updatedAt: now });
-}
-
-export async function saveSynastry(person: Person, synastry: Synastry, inputHash: string, me?: Person): Promise<void> {
-  const now = Date.now();
-  const data = (fortuneData(person) ?? { reading: { dialogue: [], traits: [], guessedLikes: [], tips: [], topics: [], systems: { zodiac: null, numerology: null, bazi: null, natal: null } }, likesWritten: false }) as FortuneData;
-  data.synastry = { data: synastry, inputHash, createdAt: now, basis: me ? { meBirth: JSON.stringify(me.birth ?? null), otherBirth: JSON.stringify(person.birth ?? null) } : undefined };
-  const fortune: FortuneCache = {
-    inputHash: person.fortune?.inputHash ?? '',
-    basis: person.fortune?.basis,
-    createdAt: person.fortune?.createdAt ?? now,
-    data,
-    rejected: person.fortune?.rejected ?? [],
-    hits: person.fortune?.hits ?? 0,
-    misses: person.fortune?.misses ?? 0,
-    lastAskedAt: person.fortune?.lastAskedAt,
-  };
-  await db.persons.update(person.id, { fortune, updatedAt: now });
-}
-
-/** 性格特点标记 准 / 不准 */
-export async function markTrait(person: Person, index: number, verdict: 'hit' | 'miss'): Promise<void> {
-  const data = fortuneData(person);
-  if (!data || !person.fortune) return;
-  const verdicts = [...(data.reading.traitVerdicts ?? data.reading.traits.map(() => null))];
-  const prevV = verdicts[index];
-  if (prevV === verdict) return;
-  verdicts[index] = verdict;
-  const trait = data.reading.traits[index];
-  const rejected = new Set(person.fortune.rejected);
-  if (verdict === 'miss') rejected.add(trait.text);
-  else rejected.delete(trait.text);
-  const hits = person.fortune.hits + (verdict === 'hit' ? 1 : 0) - (prevV === 'hit' ? 1 : 0);
-  const misses = person.fortune.misses + (verdict === 'miss' ? 1 : 0) - (prevV === 'miss' ? 1 : 0);
-  await db.persons.update(person.id, {
-    fortune: { ...person.fortune, data: { ...data, reading: { ...data.reading, traitVerdicts: verdicts } }, rejected: [...rejected], hits, misses },
-  });
 }
 
 /** 推测喜好：确认 → 正式条目（来源占卜确认）；不准 → 删除并记入 rejected */
@@ -97,8 +37,117 @@ export function fortuneStats(persons: Person[]): { hits: number; misses: number;
     if (!p.fortune) continue;
     hits += p.fortune.hits;
     misses += p.fortune.misses;
-    if (fortuneData(p)?.reading.dialogue.length) readings++;
-    if (fortuneData(p)?.synastry) synastries++;
+    const book = fortuneData(p)?.book;
+    if (book && Object.values(book.chapters).some((c) => c && c.rounds.length > 0)) readings++;
+    if (book?.chapters.synastry?.rounds.length) synastries++;
   }
   return { hits, misses, readings, synastries };
+}
+
+
+/* ------------------------------ 命书 ------------------------------ */
+const EMPTY_READING = { dialogue: [], traits: [], guessedLikes: [], tips: [], topics: [], systems: { zodiac: null, numerology: null, bazi: null, natal: null } };
+
+export function bookOf(p: Person): FortuneBook | null {
+  return fortuneData(p)?.book ?? null;
+}
+
+function ensureData(p: Person): FortuneData {
+  return fortuneData(p) ?? { reading: EMPTY_READING, likesWritten: false };
+}
+
+function cacheOf(p: Person, now: number): FortuneCache {
+  return {
+    inputHash: p.fortune?.inputHash ?? '',
+    basis: p.fortune?.basis,
+    createdAt: p.fortune?.createdAt ?? now,
+    data: p.fortune?.data ?? ensureData(p),
+    rejected: p.fortune?.rejected ?? [],
+    hits: p.fortune?.hits ?? 0,
+    misses: p.fortune?.misses ?? 0,
+    lastAskedAt: p.fortune?.lastAskedAt,
+  };
+}
+
+/** 写入（或重写）一章的第一轮 */
+export async function saveChapter(person: Person, key: Exclude<ChapterKey, 'guide'>, out: z.infer<typeof ChapterSchema>, inputHash: string, model: string): Promise<void> {
+  const now = Date.now();
+  const data = ensureData(person);
+  const book: FortuneBook = data.book ?? { chapters: {} };
+  const chapter: BookChapter = {
+    rounds: [{ sections: out.sections, createdAt: now }],
+    traits: out.traits.map((t) => ({ ...t, verdict: null })),
+    inputHash,
+    model,
+    updatedAt: now,
+  };
+  book.chapters = { ...book.chapters, [key]: chapter };
+  const cache = cacheOf(person, now);
+  cache.data = { ...data, book };
+  cache.inputHash = bookHash(person);
+  cache.basis = currentBasis(person);
+  cache.lastAskedAt = now;
+  await db.persons.update(person.id, { fortune: cache, updatedAt: now });
+}
+
+/** 「再讲讲」：追加一轮，合并新性格特点 */
+export async function appendChapterRound(person: Person, key: Exclude<ChapterKey, 'guide'>, out: z.infer<typeof ChapterSchema>, model: string): Promise<void> {
+  const now = Date.now();
+  const data = ensureData(person);
+  const book = data.book;
+  const cur = book?.chapters[key];
+  if (!book || !cur) return;
+  const known = new Set(cur.traits.map((t) => t.text));
+  const chapter: BookChapter = {
+    ...cur,
+    rounds: [...cur.rounds, { sections: out.sections, createdAt: now }],
+    traits: [...cur.traits, ...out.traits.filter((t) => !known.has(t.text)).map((t) => ({ ...t, verdict: null }))],
+    model,
+    updatedAt: now,
+  };
+  book.chapters = { ...book.chapters, [key]: chapter };
+  const cache = cacheOf(person, now);
+  cache.data = { ...data, book };
+  cache.lastAskedAt = now;
+  await db.persons.update(person.id, { fortune: cache, updatedAt: now });
+}
+
+/** 相处指南：写入，并把送礼方向落成「星婆婆的猜测」喜好条目（替换旧猜测） */
+export async function saveGuide(person: Person, out: z.infer<typeof GuideSchema>, inputHash: string, model: string): Promise<void> {
+  const now = Date.now();
+  const data = ensureData(person);
+  const book: FortuneBook = data.book ?? { chapters: {} };
+  book.guide = { ...out, sourceStamp: guideSourceStamp(book), inputHash, model, updatedAt: now };
+  const rejected = new Set(person.fortune?.rejected ?? []);
+  const kept = person.preferences.filter((p) => p.source !== 'fortune');
+  const guesses: Preference[] = out.gifts
+    .filter((g) => !rejected.has(g.name))
+    .map((g) => ({ id: uid(), name: g.name, category: g.category, tier: g.tier, note: `${g.source}章`, source: 'fortune', createdAt: now }));
+  const cache = cacheOf(person, now);
+  cache.data = { ...data, book };
+  await db.persons.update(person.id, { fortune: cache, preferences: [...kept, ...guesses], updatedAt: now });
+}
+
+/** 某章的性格特点标 准 / 不准 */
+export async function markChapterTrait(person: Person, key: Exclude<ChapterKey, 'guide'>, index: number, verdict: 'hit' | 'miss'): Promise<void> {
+  const data = fortuneData(person);
+  const chapter = data?.book?.chapters[key];
+  if (!data || !data.book || !chapter || !person.fortune) return;
+  const trait = chapter.traits[index];
+  if (!trait || trait.verdict === verdict) return;
+  const prev = trait.verdict ?? null;
+  const traits = chapter.traits.map((t, i) => (i === index ? { ...t, verdict } : t));
+  const rejected = new Set(person.fortune.rejected);
+  if (verdict === 'miss') rejected.add(trait.text);
+  else rejected.delete(trait.text);
+  const book: FortuneBook = { ...data.book, chapters: { ...data.book.chapters, [key]: { ...chapter, traits } } };
+  await db.persons.update(person.id, {
+    fortune: {
+      ...person.fortune,
+      data: { ...data, book },
+      rejected: [...rejected],
+      hits: person.fortune.hits + (verdict === 'hit' ? 1 : 0) - (prev === 'hit' ? 1 : 0),
+      misses: person.fortune.misses + (verdict === 'miss' ? 1 : 0) - (prev === 'miss' ? 1 : 0),
+    },
+  });
 }

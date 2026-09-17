@@ -20,6 +20,8 @@ export interface AchievementConfig {
 const real = (ctx: AchievementContext) => ctx.persons.filter((p) => !p.isMe);
 const gifts = (ctx: AchievementContext) => ctx.interactions.filter((i) => i.type === 'gift');
 const hearts = (p: Person) => Math.floor(p.affection / 250);
+const bookChapters = (p: Person) => (p.fortune?.data as { book?: { chapters?: Record<string, { rounds?: unknown[] }> } } | undefined)?.book?.chapters;
+const hasBook = (p: Person) => Object.values(bookChapters(p) ?? {}).some((c) => (c?.rounds?.length ?? 0) > 0);
 
 /** 连续完成任务的天数（按 resolvedAt 的本地日期去重） */
 export function doneStreak(quests: Quest[], now: Date): number {
@@ -55,9 +57,9 @@ export const ACHIEVEMENTS: AchievementConfig[] = [
   { id: 'streak_7', title: '七日不辍', description: '连续 7 天完成任务', check: (c) => doneStreak(c.quests, c.now) >= 7 },
   { id: 'fifty_interactions', title: '常来常往', description: '累计记录 50 次互动', check: (c) => c.interactions.filter((i) => i.type !== 'relationChange').length >= 50 },
   // ---- 占卜师 ----
-  { id: 'fortune_first', title: '第一次占卜', description: '请星婆婆看过一个人', check: (c) => c.persons.some((p) => Boolean((p.fortune?.data as { reading?: { dialogue?: string[] } } | undefined)?.reading?.dialogue?.length)) },
-  { id: 'fortune_ten', title: '常客', description: '给 10 个人算过', check: (c) => c.persons.filter((p) => Boolean((p.fortune?.data as { reading?: { dialogue?: string[] } } | undefined)?.reading?.dialogue?.length)).length >= 10 },
-  { id: 'fortune_syn3', title: '合盘三次', description: '合过 3 次盘', check: (c) => c.persons.filter((p) => Boolean((p.fortune?.data as { synastry?: unknown } | undefined)?.synastry)).length >= 3 },
+  { id: 'fortune_first', title: '第一本命书', description: '请星婆婆写过一章', check: (c) => c.persons.some(hasBook) },
+  { id: 'fortune_ten', title: '常客', description: '给 10 个人写过命书', check: (c) => c.persons.filter(hasBook).length >= 10 },
+  { id: 'fortune_syn3', title: '合盘三次', description: '合过 3 次盘', check: (c) => c.persons.filter((p) => Boolean(bookChapters(p)?.synastry)).length >= 3 },
   { id: 'fortune_marks', title: '较真', description: '标记过 20 次准 / 不准', check: (c) => c.persons.reduce((n, p) => n + (p.fortune?.hits ?? 0) + (p.fortune?.misses ?? 0), 0) >= 20 },
   // ---- 隐藏成就 ----
   { id: 'hidden_hate_gift', title: '你在想什么？', description: '送出了一份 TA 最讨厌的礼物', hidden: true, check: (c) => gifts(c).some((g) => g.gift?.tier === 'hate') },

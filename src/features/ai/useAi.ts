@@ -3,7 +3,7 @@ import { useSettings } from '@/db/settings';
 import { getApiKey, type AiModelId } from '@/ai/client';
 
 /** AI 是否可用（开关打开且填了 Key）+ 当前模型 */
-export function useAi(): { available: boolean; enabled: boolean; hasKey: boolean; model: AiModelId } {
+export function useAi(): { available: boolean; enabled: boolean; hasKey: boolean; model: AiModelId; fortuneModel: AiModelId } {
   const settings = useSettings();
   const [hasKey, setHasKey] = useState(() => Boolean(getApiKey()));
   useEffect(() => {
@@ -15,5 +15,5 @@ export function useAi(): { available: boolean; enabled: boolean; hasKey: boolean
       window.removeEventListener('renqing:apikey', onStorage);
     };
   }, []);
-  return { available: settings.aiEnabled && hasKey, enabled: settings.aiEnabled, hasKey, model: settings.aiModel as AiModelId };
+  return { available: settings.aiEnabled && hasKey, enabled: settings.aiEnabled, hasKey, model: settings.aiModel as AiModelId, fortuneModel: (settings.fortuneModel || 'claude-opus-5') as AiModelId };
 }

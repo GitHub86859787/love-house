@@ -19,8 +19,10 @@ export interface Settings {
   firstUseDate?: string;
   /** AI 功能总开关 */
   aiEnabled: boolean;
-  /** AI 模型 */
+  /** 笔记提取 / 摘要用的模型 */
   aiModel: string;
+  /** 命书 / 合盘用的模型 */
+  fortuneModel: string;
   /** 已看过占卜屋的自我介绍 */
   fortuneIntroSeen?: boolean;
   /** 最近一次导出备份时间 */
@@ -38,6 +40,7 @@ export const DEFAULT_SETTINGS: Settings = {
   disabledHolidays: [],
   aiEnabled: false,
   aiModel: 'claude-sonnet-5',
+  fortuneModel: 'claude-opus-5',
 };
 
 const KEY = 'app';

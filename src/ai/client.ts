@@ -7,13 +7,20 @@ import Anthropic from '@anthropic-ai/sdk';
 const KEY_STORAGE = 'renqing.apiKey';
 
 export const AI_MODELS = [
-  { id: 'claude-sonnet-5', label: 'Sonnet 5（默认，性价比高）' },
-  { id: 'claude-opus-5', label: 'Opus 5（更强，更贵）' },
-  { id: 'claude-haiku-4-5', label: 'Haiku 4.5（最快最便宜）' },
+  { id: 'claude-sonnet-5', label: 'Sonnet 5（性价比高）', maxOutput: 128000 },
+  { id: 'claude-opus-5', label: 'Opus 5（更强，更贵）', maxOutput: 128000 },
+  { id: 'claude-haiku-4-5', label: 'Haiku 4.5（最快最便宜）', maxOutput: 64000 },
 ] as const;
 
 export type AiModelId = (typeof AI_MODELS)[number]['id'];
+/** 笔记提取 / 摘要默认 */
 export const DEFAULT_MODEL: AiModelId = 'claude-sonnet-5';
+/** 命书 / 合盘默认 */
+export const DEFAULT_FORTUNE_MODEL: AiModelId = 'claude-opus-5';
+
+export function maxOutputOf(model: string): number {
+  return AI_MODELS.find((m) => m.id === model)?.maxOutput ?? 64000;
+}
 
 export function getApiKey(): string {
   try {

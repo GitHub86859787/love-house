@@ -31,10 +31,13 @@ export const SynastrySchema = z.object({
 });
 export type Synastry = z.infer<typeof SynastrySchema>;
 
-/** 存在 person.fortune.data 里的结构 */
+import type { FortuneBook } from './book';
+
+/** 存在 person.fortune.data 里的结构。reading / synastry 是旧版单次解读，保留以便兼容旧数据；新版用 book */
 export interface FortuneData {
   reading: Reading & { traitVerdicts?: ('hit' | 'miss' | null)[] };
   /** 推测喜好是否已写入喜好列表 */
   likesWritten: boolean;
   synastry?: { data: Synastry; inputHash: string; createdAt: number; basis?: { meBirth: string; otherBirth: string } };
+  book?: FortuneBook;
 }

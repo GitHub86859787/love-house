@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { updateSettings, useSettings } from '@/db/settings';
-import { AI_MODELS, createClient, friendlyError, getApiKey, setApiKey } from '@/ai/client';
+import { AI_MODELS, DEFAULT_FORTUNE_MODEL, createClient, friendlyError, getApiKey, setApiKey } from '@/ai/client';
 import { Panel, Inset } from '@/ui/Panel';
 import { Button } from '@/ui/Button';
 import { Field, Input, Select } from '@/ui/Field';
@@ -41,7 +41,7 @@ export function AiSettings({ Toggle }: { Toggle: (p: { label: string; hint?: str
 
   return (
     <Panel title="AI 助手">
-      <Toggle label="启用 AI 功能" hint="笔记整理、人物摘要、占卜师解读。关闭后 App 完全可用" checked={settings.aiEnabled} onChange={(v) => updateSettings({ aiEnabled: v })} />
+      <Toggle label="启用 AI 功能" hint="笔记整理、人物摘要、星婆婆写命书。关闭后 App 完全可用" checked={settings.aiEnabled} onChange={(v) => updateSettings({ aiEnabled: v })} />
       {settings.aiEnabled && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <Field label="Anthropic API Key" hint="只保存在这台设备的浏览器里，只在你点按钮时发给 Anthropic，不经过任何中间服务器">
@@ -60,8 +60,17 @@ export function AiSettings({ Toggle }: { Toggle: (p: { label: string; hint?: str
               {testing ? '测试中…' : '测试连接'}
             </Button>
           </div>
-          <Field label="模型">
+          <Field label="笔记提取 / 摘要用的模型" hint="默认 Sonnet 5，量大、便宜、够用">
             <Select value={settings.aiModel} onChange={(e) => updateSettings({ aiModel: e.target.value })}>
+              {AI_MODELS.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="命书 / 合盘用的模型" hint="默认 Opus 5，一章一章写、写得细，输出不设上限">
+            <Select value={settings.fortuneModel || DEFAULT_FORTUNE_MODEL} onChange={(e) => updateSettings({ fortuneModel: e.target.value })}>
               {AI_MODELS.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.label}
@@ -71,7 +80,7 @@ export function AiSettings({ Toggle }: { Toggle: (p: { label: string; hint?: str
           </Field>
           <Inset>
             <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>
-              AI 只做三件事：把笔记整理成喜好 / 性格 / 雷区候选（你逐条勾选后才写入）、生成"你眼中的 TA"摘要、占卜师解读。不做礼物或话题推荐。
+              AI 只做三件事：把笔记整理成喜好 / 性格 / 雷区候选（你逐条勾选后才写入）、生成「你眼中的 TA」摘要、星婆婆写命书。不做礼物或话题推荐。
             </p>
           </Inset>
         </div>
