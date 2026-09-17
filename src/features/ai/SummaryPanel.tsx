@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/db';
 import type { Person } from '@/db/types';
 import { updatePerson } from '@/db/persons';
-import { generateSummary, summaryHash, summaryInput } from '@/ai/summary';
+import { summaryHash, summaryInput } from '@/ai/summaryInput';
 import { estimateTokens, friendlyError } from '@/ai/client';
 import { Panel } from '@/ui/Panel';
 import { Button } from '@/ui/Button';
@@ -28,7 +28,7 @@ export function SummaryPanel({ person }: { person: Person }) {
   const run = async () => {
     setBusy(true);
     try {
-      const r = await generateSummary(input, ai.model);
+      const r = await (await import('@/ai/summary')).generateSummary(input, ai.model);
       await updatePerson(person.id, { aiSummary: { text: r.summary, tips: r.tips, sourceHash: hash, createdAt: Date.now() } });
       toast('摘要更新了');
     } catch (e) {

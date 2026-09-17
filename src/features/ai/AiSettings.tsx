@@ -22,13 +22,13 @@ export function AiSettings({ Toggle }: { Toggle: (p: { label: string; hint?: str
   const test = async () => {
     setApiKey(key);
     window.dispatchEvent(new Event('renqing:apikey'));
-    const client = createClient();
-    if (!client) {
-      toast('先填 Key', 'error');
-      return;
-    }
     setTesting(true);
     try {
+      const client = await createClient();
+      if (!client) {
+        toast('先填 Key', 'error');
+        return;
+      }
       const r = await client.messages.create({ model: settings.aiModel, max_tokens: 32, messages: [{ role: 'user', content: '回复"你好"两个字' }] });
       const text = r.content.find((b) => b.type === 'text');
       toast(`连上了：${text && text.type === 'text' ? text.text.slice(0, 20) : 'OK'}`);

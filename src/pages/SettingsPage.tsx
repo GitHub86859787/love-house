@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { db } from '@/db/db';
 import { DEFAULT_SETTINGS, updateSettings, useSettings } from '@/db/settings';
 import { RELATIONS, RELATION_ORDER } from '@/config/relations';
@@ -12,9 +11,8 @@ import { Avatar } from '@/pixel/avatar/Avatar';
 import { Page, PageHeader } from '@/app/Layout';
 import { Panel, Inset } from '@/ui/Panel';
 import { Button } from '@/ui/Button';
-import { Modal } from '@/ui/Modal';
 import { Input } from '@/ui/Field';
-import { useToast } from '@/ui/Toast';
+import { DataPanel } from '@/features/backup/DataPanel';
 
 function Toggle({ label, hint, checked, onChange }: { label: string; hint?: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -57,22 +55,9 @@ function Toggle({ label, hint, checked, onChange }: { label: string; hint?: stri
 }
 
 export function SettingsPage() {
-  const toast = useToast();
   const nav = useNavigate();
   const settings = useSettings();
   const me = useLiveQuery(() => db.persons.filter((p) => Boolean(p.isMe)).first(), []);
-  const [confirmClear, setConfirmClear] = useState(false);
-  const [clearText, setClearText] = useState('');
-
-  const clearAll = async () => {
-    if (clearText !== '清空') return;
-    await db.transaction('rw', db.tables, async () => {
-      for (const t of db.tables) await t.clear();
-    });
-    setConfirmClear(false);
-    setClearText('');
-    toast('已清空全部数据');
-  };
 
   return (
     <Page>
@@ -172,14 +157,16 @@ export function SettingsPage() {
         />
       </Panel>
 
-      <Panel title="数据">
-        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)', marginBottom: 12 }}>
-          所有数据只保存在这台设备的浏览器里。导出 / 导入备份将在后续阶段开放。
-        </p>
-        <Button variant="danger" block iconName="trash" onClick={() => setConfirmClear(true)}>
-          清空全部数据
-        </Button>
+      <Panel title="年度回顾" tight>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 4 }}>
+          <span style={{ flex: 1, fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>这一年认识了谁、记了多少笔、涨了几颗心，做成一张像素总结卡，可以存图。</span>
+          <Button size="small" variant="primary" onClick={() => nav('/review')}>
+            看回顾
+          </Button>
+        </div>
       </Panel>
+
+      <DataPanel />
 
       <Panel title="排盘自检" tight>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 4 }}>
@@ -191,22 +178,10 @@ export function SettingsPage() {
       </Panel>
 
       <Panel title="关于">
-        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>人情村 v{__APP_VERSION__} · 阶段 5 占卜师</p>
-        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>字体：缝合像素字体 Fusion Pixel（OFL 许可）；农历：lunar-typescript（MIT）</p>
+        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>人情村 v{__APP_VERSION__} · 阶段 6 打磨</p>
+        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>字体：缝合像素字体 Fusion Pixel（OFL 许可）；农历：lunar-typescript（MIT）；天文：astronomy-engine（MIT）</p>
       </Panel>
 
-      <Modal open={confirmClear} title="确定清空？" onClose={() => setConfirmClear(false)}>
-        <p>所有村民、互动、任务、设置都会被删除，无法恢复。输入「清空」两个字确认：</p>
-        <Input value={clearText} onChange={(e) => setClearText(e.target.value)} placeholder="清空" />
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Button block variant="ghost" onClick={() => setConfirmClear(false)}>
-            取消
-          </Button>
-          <Button block variant="danger" onClick={clearAll} disabled={clearText !== '清空'}>
-            清空
-          </Button>
-        </div>
-      </Modal>
     </Page>
   );
 }

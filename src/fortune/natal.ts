@@ -3,6 +3,7 @@
  * 有出生时间 → 太阳到冥王星各自的星座；再有出生地 → 上升、天顶、十二宫（等宫制）。
  */
 import * as A from 'astronomy-engine';
+import { registerNatal } from './chart';
 import type { Birth } from '@/db/types';
 import { birthToSolar } from './chart';
 
@@ -127,3 +128,6 @@ export function natalToText(n: NatalChart): string {
   if (n.mc) lines.push(`天顶 ${n.mc.sign} ${n.mc.degree.toFixed(1)}°`);
   return lines.join('\n');
 }
+
+// 导入本模块即注册到 chart.buildChart
+registerNatal({ build: buildNatal, toText: natalToText });

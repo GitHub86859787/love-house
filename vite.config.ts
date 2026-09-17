@@ -9,6 +9,23 @@ const base = process.env.BASE_PATH ?? '/';
 export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? '0.1.0') },
   base,
+  build: {
+    rollupOptions: {
+      output: {
+        // 按库拆块：SDK / 天文库只在用到时下载；react / dexie / 农历 单独成块便于缓存
+        codeSplitting: {
+          groups: [
+            { name: 'vite', test: /\0vite\// },
+            { name: 'lunar', test: /node_modules[\\/]lunar-typescript/ },
+            { name: 'astronomy', test: /node_modules[\\/]astronomy-engine/ },
+            { name: 'anthropic', test: /node_modules[\\/](@anthropic-ai|zod)[\\/]/ },
+            { name: 'react', test: /node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/ },
+            { name: 'dexie', test: /node_modules[\\/]dexie/ },
+          ],
+        },
+      },
+    },
+  },
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
@@ -19,6 +36,7 @@ export default defineConfig({
       includeAssets: ['icons/*.png'],
       workbox: {
         globPatterns: ['**/*.{js,css,html,woff2,png,svg}'],
+        globIgnores: ['**/splash/**'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
       manifest: {

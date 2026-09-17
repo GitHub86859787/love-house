@@ -25,6 +25,8 @@ export interface Settings {
   fortuneModel: string;
   /** 已看过占卜屋的自我介绍 */
   fortuneIntroSeen?: boolean;
+  /** 新手教程已完成 / 跳过 */
+  tutorialDone?: boolean;
   /** 最近一次导出备份时间 */
   lastExportAt?: number;
   /** 上次衰减结算的日期 */

@@ -67,7 +67,7 @@ export function TaskBoard({ persons }: { persons: Person[] }) {
         <div className={styles.list}>
           {visible.map((q) => {
             const p = personOf(q.personId);
-            const go = () => (p ? nav(`/person/${p.id}`) : undefined);
+            const go = () => (p ? nav(`/person/${p.id}`) : q.kind === 'backup' ? nav('/settings#data') : undefined);
             return (
               <div key={q.id} className={`${styles.item} px-corner-sm`}>
                 <div className={styles.avatar} onClick={go}>

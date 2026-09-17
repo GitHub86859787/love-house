@@ -9,6 +9,17 @@
   padding-bottom: calc(var(--nav-height) + var(--safe-bottom));
 }
 
+/* iOS 全屏模式下状态栏是白字：顶部安全区铺一条深木色，和 theme-color 一致 */
+.statusBand {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--safe-top);
+  background: var(--wood-dark);
+  z-index: 60;
+}
+
 .page {
   max-width: 480px;
   margin: 0 auto;

@@ -8,7 +8,7 @@ import { HOLIDAYS } from '@/config/holidays';
 import { MILESTONES, type MilestoneQuestCheck } from '@/config/milestones';
 import { RELATIONS } from '@/config/relations';
 import { lunarToSolar, upcomingBirthdays } from '@/lib/birthday';
-import { daysBetween, toDateKey } from '@/lib/date';
+import { daysBetween, parseDateKey, toDateKey } from '@/lib/date';
 import { daysSinceContact, graceDaysOf, isStale, lastContactDate } from '@/features/scoring/decay';
 import { Solar } from 'lunar-typescript';
 
@@ -31,8 +31,8 @@ const PRIORITY: Record<QuestKind, number> = {
   milestone: 40,
   holiday: 50,
   stale: 60,
+  backup: 65,
   profile: 70,
-  backup: 80,
 };
 
 function hearts(p: Person): number {
@@ -161,9 +161,28 @@ export function generateCandidates(persons: Person[], settings: Settings, today 
     }
   }
 
+  // 备份提醒：超过 30 天没导出过
+  if (persons.length > 0) {
+    const last = settings.lastExportAt ?? (settings.firstUseDate ? parseDateKey(settings.firstUseDate).getTime() : undefined);
+    if (last !== undefined) {
+      const days = daysBetween(new Date(last), today);
+      if (days > BACKUP_REMIND_DAYS) {
+        out.push({
+          kind: 'backup',
+          ruleKey: `backup:${last}`,
+          title: '该备份一下了',
+          description: `${settings.lastExportAt ? '上次导出' : '开始用'}已经 ${days} 天。数据只在这台手机上，去设置里导出一份`,
+          priority: PRIORITY.backup,
+        });
+      }
+    }
+  }
+
   void todayKey;
   return out;
 }
+
+export const BACKUP_REMIND_DAYS = 30;
 
 /** 里程碑任务的自动完成判定 */
 export function milestoneCheckPassed(check: MilestoneQuestCheck, person: Person, interactions: Interaction[], unlockedAt: number): boolean {
@@ -201,7 +220,7 @@ export function autoResolve(
     if (cand.check && milestoneCheckPassed(cand.check, p, interactions, q.createdAt)) return 'done';
     return null;
   }
-  if (q.kind === 'stale' || q.kind === 'profile') {
+  if (q.kind === 'stale' || q.kind === 'profile' || q.kind === 'backup') {
     // 条件消失 = 做到了
     return still ? null : 'done';
   }

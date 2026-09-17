@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/db';
@@ -24,7 +24,8 @@ import { ReminderSection } from '@/features/quests/ReminderSection';
 import { MilestoneCard } from '@/features/milestones/MilestoneCard';
 import { useNotesAi } from '@/features/ai/NotesAi';
 import { SummaryPanel } from '@/features/ai/SummaryPanel';
-import { FortuneTab } from '@/features/fortune/FortuneTab';
+// 排盘 + 本命盘 + 命书这一块按需加载
+const FortuneTab = lazy(() => import('@/features/fortune/FortuneTab').then((m) => ({ default: m.FortuneTab })));
 import type { MilestoneConfig } from '@/config/milestones';
 import { uid } from '@/lib/id';
 import { formatDateTime, formatRelative } from '@/lib/date';
@@ -222,7 +223,11 @@ export function PersonDetailPage() {
           </div>
         )}
 
-        {tab === 'fortune' && <FortuneTab person={person} />}
+        {tab === 'fortune' && (
+          <Suspense fallback={<p style={{ textAlign: 'center', color: 'var(--ink-soft)', fontSize: 'var(--fs-sm)', padding: 24 }}>星婆婆在翻排盘……</p>}>
+            <FortuneTab person={person} />
+          </Suspense>
+        )}
 
         {tab === 'milestones' && !person.isMe && (
           <div>

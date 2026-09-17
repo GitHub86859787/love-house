@@ -2,8 +2,9 @@ import { db } from './db';
 import type { FortuneCache, Person, Preference } from './types';
 import { uid } from '@/lib/id';
 import type { FortuneData } from '@/fortune/schemas';
-import type { BookChapter, ChapterSchema, FortuneBook, GuideSchema } from '@/fortune/book';
-import { bookHash, currentBasis, guideSourceStamp } from '@/fortune/book';
+import type { ChapterSchema, GuideSchema } from '@/fortune/book';
+import type { BookChapter, FortuneBook } from '@/fortune/bookCore';
+import { bookHash, currentBasis, guideSourceStamp } from '@/fortune/bookCore';
 import type { ChapterKey } from '@/config/fortune-book';
 import type { z } from 'zod';
 
@@ -70,12 +71,12 @@ function cacheOf(p: Person, now: number): FortuneCache {
 }
 
 /** 写入（或重写）一章的第一轮 */
-export async function saveChapter(person: Person, key: Exclude<ChapterKey, 'guide'>, out: z.infer<typeof ChapterSchema>, inputHash: string, model: string): Promise<void> {
+export async function saveChapter(person: Person, key: Exclude<ChapterKey, 'guide'>, out: z.infer<typeof ChapterSchema>, inputHash: string, model: string, partial?: { error: string }): Promise<void> {
   const now = Date.now();
   const data = ensureData(person);
   const book: FortuneBook = data.book ?? { chapters: {} };
   const chapter: BookChapter = {
-    rounds: [{ sections: out.sections, createdAt: now }],
+    rounds: [{ sections: out.sections, createdAt: now, ...(partial ? { incomplete: true, error: partial.error } : {}) }],
     traits: out.traits.map((t) => ({ ...t, verdict: null })),
     inputHash,
     model,
@@ -91,7 +92,7 @@ export async function saveChapter(person: Person, key: Exclude<ChapterKey, 'guid
 }
 
 /** 「再讲讲」：追加一轮，合并新性格特点 */
-export async function appendChapterRound(person: Person, key: Exclude<ChapterKey, 'guide'>, out: z.infer<typeof ChapterSchema>, model: string): Promise<void> {
+export async function appendChapterRound(person: Person, key: Exclude<ChapterKey, 'guide'>, out: z.infer<typeof ChapterSchema>, model: string, partial?: { error: string }): Promise<void> {
   const now = Date.now();
   const data = ensureData(person);
   const book = data.book;
@@ -100,7 +101,38 @@ export async function appendChapterRound(person: Person, key: Exclude<ChapterKey
   const known = new Set(cur.traits.map((t) => t.text));
   const chapter: BookChapter = {
     ...cur,
-    rounds: [...cur.rounds, { sections: out.sections, createdAt: now }],
+    rounds: [...cur.rounds, { sections: out.sections, createdAt: now, ...(partial ? { incomplete: true, error: partial.error } : {}) }],
+    traits: [...cur.traits, ...out.traits.filter((t) => !known.has(t.text)).map((t) => ({ ...t, verdict: null }))],
+    model,
+    updatedAt: now,
+  };
+  book.chapters = { ...book.chapters, [key]: chapter };
+  const cache = cacheOf(person, now);
+  cache.data = { ...data, book };
+  cache.lastAskedAt = now;
+  await db.persons.update(person.id, { fortune: cache, updatedAt: now });
+}
+
+/** 「接着讲」：把断掉的最后一轮补完（同标题的小节合并正文） */
+export async function resumeChapterRound(person: Person, key: Exclude<ChapterKey, 'guide'>, out: z.infer<typeof ChapterSchema>, model: string, partial?: { error: string }): Promise<void> {
+  const now = Date.now();
+  const data = ensureData(person);
+  const book = data.book;
+  const cur = book?.chapters[key];
+  if (!book || !cur || cur.rounds.length === 0) return;
+  const last = cur.rounds[cur.rounds.length - 1];
+  const sections = [...last.sections];
+  const incoming = [...out.sections];
+  if (incoming.length && sections.length && incoming[0].title === sections[sections.length - 1].title) {
+    const tail = sections.pop()!;
+    sections.push({ title: tail.title, body: `${tail.body}${incoming.shift()!.body}` });
+  }
+  sections.push(...incoming);
+  const known = new Set(cur.traits.map((t) => t.text));
+  const round = partial ? { sections, createdAt: last.createdAt, incomplete: true, error: partial.error } : { sections, createdAt: last.createdAt };
+  const chapter: BookChapter = {
+    ...cur,
+    rounds: [...cur.rounds.slice(0, -1), round],
     traits: [...cur.traits, ...out.traits.filter((t) => !known.has(t.text)).map((t) => ({ ...t, verdict: null }))],
     model,
     updatedAt: now,

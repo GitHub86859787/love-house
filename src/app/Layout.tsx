@@ -4,9 +4,11 @@ import styles from './App.module.css';
 import { Sprite } from '@/pixel/Sprite';
 import { icon, type IconName } from '@/pixel/sprites/icons';
 import { runDecayIfNeeded } from '@/features/scoring/runtime';
-import { useSettings } from '@/db/settings';
+import { getSettings, updateSettings, useSettings } from '@/db/settings';
+import { toDateKey } from '@/lib/date';
 import { setSoundEnabled } from '@/audio/sound';
 import { ToastLine } from '@/ui/Toast';
+import { Tutorial } from '@/features/tutorial/Tutorial';
 
 const NAV_LEFT: { to: string; label: string; icon: IconName }[] = [
   { to: '/', label: '村口', icon: 'village' },
@@ -33,6 +35,13 @@ export function Layout() {
   const settings = useSettings();
   useEffect(() => setSoundEnabled(settings.soundEnabled), [settings.soundEnabled]);
 
+  // 首次使用日期（备份提醒 / 年度回顾用）
+  useEffect(() => {
+    getSettings()
+      .then((s) => (s.firstUseDate ? undefined : updateSettings({ firstUseDate: toDateKey() })))
+      .catch(() => {});
+  }, []);
+
   // 打开 App / 回到前台时结算衰减（每天一次）
   useEffect(() => {
     runDecayIfNeeded().catch(() => {});
@@ -47,7 +56,9 @@ export function Layout() {
 
   return (
     <div className={styles.app}>
+      <div className={styles.statusBand} aria-hidden="true" />
       <Outlet />
+      <Tutorial />
       <nav className={styles.nav}>
         {NAV_LEFT.map((n) => (
           <NavItem key={n.to} {...n} />

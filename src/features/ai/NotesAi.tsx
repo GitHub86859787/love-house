@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type { Note, Person } from '@/db/types';
-import { extractFromNotes } from '@/ai/extract';
 import { estimateTokens, friendlyError } from '@/ai/client';
 import type { ExtractResult } from '@/ai/schemas';
 import { Button } from '@/ui/Button';
@@ -20,7 +19,7 @@ export function useNotesAi(person: Person) {
     const key = notes.map((n) => n.id).join(',');
     setBusy(key);
     try {
-      const result = await extractFromNotes(person, notes, ai.model);
+      const result = await (await import('@/ai/extract')).extractFromNotes(person, notes, ai.model);
       setReview({ result, noteIds: notes.map((n) => n.id) });
     } catch (e) {
       toast(friendlyError(e), 'error');

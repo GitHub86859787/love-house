@@ -206,8 +206,15 @@
   }
 }
 
+/* 没有村民时的提示放在右上角的天空里，不压着帐篷和星婆婆 */
 .empty {
-  left: 200px;
-  right: auto;
-  width: 200px;
+  top: 8px;
+  right: 8px;
+  left: auto;
+  bottom: auto;
+  width: 168px;
+  padding: 0 4px;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  align-items: flex-start;
 }

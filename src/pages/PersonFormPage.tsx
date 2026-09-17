@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/db';
 import type { AvatarConfig, Birth, SelfTag } from '@/db/types';
 import { BirthSection, EMPTY_BIRTH_DRAFT, birthFromDraft, draftFromBirth, type BirthDraft } from '@/features/persons/BirthSection';
-import { createPerson, deletePerson, updatePerson } from '@/db/persons';
+import { clearPersonData, createPerson, deletePerson, updatePerson } from '@/db/persons';
 import { addInteraction } from '@/db/interactions';
 import { useSettings } from '@/db/settings';
 import { RELATIONS, RELATION_ORDER, type RelationType } from '@/config/relations';
@@ -66,6 +66,8 @@ function PersonFormInner() {
   const [loaded, setLoaded] = useState(!editing);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteName, setDeleteName] = useState('');
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [clearName, setClearName] = useState('');
 
   useEffect(() => {
     if (!existing || loaded) return;
@@ -235,9 +237,39 @@ function PersonFormInner() {
         {editing ? '保存' : isMe ? '建好我的档案' : '搬进村里'}
       </Button>
 
-      {editing && existing && !existing.isMe && (
+      {editing && existing && (
         <>
           <div style={{ height: 24 }} />
+          <Button variant="ghost" block onClick={() => { setClearName(''); setConfirmClear(true); }}>
+            清空{existing.isMe ? '我' : ' TA '}的记录（保留名字、生日、头像）
+          </Button>
+          <Modal open={confirmClear} title="确定清空记录？" onClose={() => setConfirmClear(false)}>
+            <p>{existing.name} 的互动、任务、笔记、喜好、雷区、标签、心事、摘要、命书都会清掉，好感度归零，只留名字 / 称呼 / 关系 / 生日 / 头像。无法恢复。输入名字确认：</p>
+            <Input value={clearName} onChange={(e) => setClearName(e.target.value)} placeholder={existing.name} />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button block variant="ghost" onClick={() => setConfirmClear(false)}>
+                取消
+              </Button>
+              <Button
+                block
+                variant="danger"
+                disabled={clearName.trim() !== existing.name}
+                onClick={async () => {
+                  await clearPersonData(existing.id);
+                  setConfirmClear(false);
+                  toast(`${existing.name} 的记录清空了`);
+                  nav(`/person/${existing.id}`, { replace: true });
+                }}
+              >
+                清空
+              </Button>
+            </div>
+          </Modal>
+        </>
+      )}
+
+      {editing && existing && !existing.isMe && (
+        <>
           <Button variant="ghost" block iconName="trash" onClick={() => { setDeleteName(''); setConfirmDelete(true); }}>
             让 TA 搬走（删除）
           </Button>

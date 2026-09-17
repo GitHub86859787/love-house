@@ -33,6 +33,39 @@ export async function deletePerson(id: string): Promise<void> {
   });
 }
 
+/**
+ * 清空某人的记录：互动、任务、笔记、喜好、雷区、标签、心事、摘要、命书，好感度归零；
+ * 只留名字 / 称呼 / 关系 / 生日 / 头像 / 认识日期。
+ */
+export async function clearPersonData(id: string): Promise<void> {
+  await db.transaction('rw', db.persons, db.interactions, db.quests, async () => {
+    const p = await db.persons.get(id);
+    if (!p) return;
+    await db.interactions.where('personId').equals(id).delete();
+    await db.quests.where('personId').equals(id).delete();
+    const cleared: Person = {
+      id: p.id,
+      name: p.name,
+      nickname: p.nickname,
+      relation: p.relation,
+      metOn: p.metOn,
+      birth: p.birth,
+      avatar: p.avatar,
+      isMe: p.isMe,
+      tags: [],
+      selfTags: [],
+      preferences: [],
+      taboos: [],
+      notes: [],
+      affection: 0,
+      milestonesUnlocked: [],
+      createdAt: p.createdAt,
+      updatedAt: Date.now(),
+    };
+    await db.persons.put(cleared);
+  });
+}
+
 /** 「我」的档案（全库唯一） */
 export async function getMe(): Promise<Person | undefined> {
   return db.persons.filter((p) => Boolean(p.isMe)).first();

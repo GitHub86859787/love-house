@@ -4,7 +4,19 @@
  */
 import { Lunar, LunarUtil, Solar } from 'lunar-typescript';
 import type { Birth, ManualPillars } from '@/db/types';
-import { buildNatal, natalToText, type NatalChart } from './natal';
+import type { NatalChart } from './natal';
+
+/**
+ * 本命盘算法（astronomy-engine，约 150KB）按需加载：占卜相关页面导入 natal.ts 时自动注册进来，
+ * 其他页面（表单预览等）调用 buildChart 不会带上这块代码。
+ */
+let natalImpl: { build: (birth: Birth) => NatalChart | null; toText: (n: NatalChart) => string } | null = null;
+export function registerNatal(impl: NonNullable<typeof natalImpl>): void {
+  natalImpl = impl;
+}
+export function natalAvailable(): boolean {
+  return natalImpl !== null;
+}
 
 export type CompletenessLevel = 0 | 1 | 2 | 3;
 
@@ -312,7 +324,7 @@ export function buildChart(birth: Birth | undefined, today = new Date()): Chart 
     chart.pillarShengXiao = chart.shengXiao;
     if (birth.manualPillars.hour) chart.shiChen = `${birth.manualPillars.hour[1]}时`;
   } else if (level === 3 && birth.hour != null) chart.shiChen = shiChenOf(birth.hour);
-  chart.natal = buildNatal(birth);
+  chart.natal = natalImpl ? natalImpl.build(birth) : null;
   // 本命年：今年农历年的生肖 == 出生农历年的生肖（同样按春节切换）
   const nowLunar = Solar.fromYmd(today.getFullYear(), today.getMonth() + 1, today.getDate()).getLunar();
   chart.benMingNian = nowLunar.getYearShengXiao() === chart.shengXiao;
@@ -334,6 +346,6 @@ export function chartToText(chart: Chart): string {
     if (b.trueSolarNote) lines.push(`时柱已按${b.trueSolarNote}`);
     lines.push(`五行分布：${(Object.keys(b.wuxing) as WuXing[]).map((k) => `${k}${b.wuxing[k]}`).join(' ')}；最旺：${b.strongest.join('、')}；缺：${b.missing.length ? b.missing.join('、') : '无'}`);
   }
-  if (chart.natal) lines.push(natalToText(chart.natal));
+  if (chart.natal && natalImpl) lines.push(natalImpl.toText(chart.natal));
   return lines.join('\n');
 }
