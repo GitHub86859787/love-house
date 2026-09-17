@@ -5,21 +5,25 @@ import { Panel, Inset } from '@/ui/Panel';
 import { Button } from '@/ui/Button';
 import { Tabs } from '@/ui/Tabs';
 import { Select } from '@/ui/Field';
-import type { Grid } from '@/pixel/painter';
+import { Grid } from '@/pixel/painter';
 import { gridToDataURL } from '@/pixel/render';
 import { currentSeason, type Season } from '@/lib/season';
 import { FAMILIES, SEASON_RAMPS } from '../palette';
 import { groundDemo, groundSheet } from '../sprites/ground';
 import { WATER_FRAMES, waterAnimStrip, waterDemo, waterSheet } from '../sprites/water';
 import { floraDemo, floraSheet, treeStrip } from '../sprites/flora';
+import { oldHouseSprite, smokeSprite, OLDHOUSE_H, OLDHOUSE_W } from '../sprites/buildings/oldhouse';
+import { grassAt } from '../sprites/ground';
+import { TILE } from '../sprites/tile';
 import styles from './PreviewPage.module.css';
 
-type Tab = 'palette' | 'ground' | 'water' | 'flora';
+type Tab = 'palette' | 'ground' | 'water' | 'flora' | 'buildings';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'palette', label: '色卡' },
   { key: 'ground', label: '1 地面' },
   { key: 'water', label: '2 水系' },
   { key: 'flora', label: '3 植被小物' },
+  { key: 'buildings', label: '4 建筑' },
 ];
 const SEASONS: { key: Season; label: string }[] = [
   { key: 'spring', label: '春' },
@@ -89,6 +93,7 @@ export function PreviewPage() {
         <Tabs tabs={TABS} value={tab} onChange={setTab} />
         {tab === 'palette' && <PaletteCard season={s} />}
         {tab === 'ground' && <GroundSheet season={s} scale={scale} />}
+        {tab === 'buildings' && <BuildingSheet season={s} scale={scale} frame={frame} />}
         {tab === 'flora' && <FloraSheet season={s} scale={scale} frame={frame} />}
         {tab === 'water' && <WaterSheet season={s} scale={scale} frame={frame} animate={animate} onToggle={() => setAnimate((a) => !a)} />}
       </Panel>
@@ -239,6 +244,43 @@ function FloraSheet({ season, scale, frame }: { season: Season; scale: Scale; fr
             <div className={styles.itemName}>{it.name}</div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/** 把一栋房子放在草地上看（含烟） */
+function houseOnGrass(season: Season, night: boolean, frame: number): Grid {
+  const cols = 7;
+  const rows = 6;
+  const g = new Grid(cols * TILE, rows * TILE);
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) g.compose(grassAt(season, x + 30, y + 30), x * TILE, y * TILE);
+  const ox = 8;
+  const oy = 8;
+  g.compose(oldHouseSprite(season, night, frame), ox, oy);
+  if (season === 'autumn' || season === 'winter') g.compose(smokeSprite(frame), ox + 66, oy - 14);
+  return g;
+}
+
+function BuildingSheet({ season, scale, frame }: { season: Season; scale: Scale; frame: number }) {
+  const day = useMemo(() => houseOnGrass(season, false, frame), [season, frame]);
+  const night = useMemo(() => houseOnGrass(season, true, frame), [season, frame]);
+  const label = SEASONS.find((x) => x.key === season)?.label;
+  void OLDHOUSE_W;
+  void OLDHOUSE_H;
+  return (
+    <div className={styles.sheet} data-shot="sheet">
+      <p className={styles.note}>
+        建筑 · 老宅 · {label} · {scale}× · 左白天 / 右夜晚亮窗（夜晚只换窗，整体换色表在第 6 类）
+      </p>
+      <div className={styles.demo} data-shot="extra" style={{ display: 'flex', gap: 12 }}>
+        <Px grid={day} scale={scale} title="白天" />
+        <Px grid={night} scale={scale} title="夜晚" />
+      </div>
+      <p className={styles.note}>1× 自检</p>
+      <div className={styles.demo} style={{ display: 'flex', gap: 12 }}>
+        <Px grid={day} scale={1} />
+        <Px grid={night} scale={1} />
       </div>
     </div>
   );

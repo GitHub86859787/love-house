@@ -148,14 +148,23 @@ function paintCrown(g: Grid, m: Layer[][], c: LeafColors, rnd: Rng, season: Seas
     g.set(px, py + 1, c.outline);
     g.set(px + 1, py + 1, c.dark);
   }
-  // 春：粉花点缀在冠边（8–12 点）
+  // 春：冠边 8–10 粒粉基阶（其中一半是 2 px 小簇）+ 3 粒粉亮阶，一眼看出开花了
   if (season === 'spring') {
     const pk = ramp('pink');
     const edge: [number, number][] = [];
-    for (let y = 0; y < H; y++) for (let x = 0; x < TREE_W; x++) if (m[y][x] && (x === 0 || y === 0 || !m[y][x - 1] || !m[y - 1][x] || (x + 1 < TREE_W && !m[y][x + 1]))) edge.push([x, y]);
-    for (let k = 0; k < irange(rnd, 9, 12) && edge.length; k++) {
+    for (let y = 0; y < H; y++) for (let x = 0; x < TREE_W; x++) if (m[y][x] && (x === 0 || y === 0 || !m[y][x - 1] || !m[y - 1][x] || (x + 1 < TREE_W && !m[y][x + 1]) || (y + 1 < H && !m[y + 1][x]))) edge.push([x, y]);
+    const n = irange(rnd, 8, 10);
+    for (let k = 0; k < n && edge.length; k++) {
       const [px, py] = edge[irange(rnd, 0, edge.length - 1)];
-      g.set(px, py, rnd() < 0.6 ? pk.light : pk.base);
+      g.set(px, py, pk.base);
+      if (k % 2 === 0) {
+        const nx = px + (m[py][Math.min(TREE_W - 1, px + 1)] ? 1 : -1);
+        if (m[py][nx]) g.set(nx, py, pk.base);
+      }
+    }
+    for (let k = 0; k < 3 && edge.length; k++) {
+      const [px, py] = edge[irange(rnd, 0, edge.length - 1)];
+      g.set(px, py, pk.light);
     }
   }
   g.outline(c.outline);
@@ -200,63 +209,61 @@ function paintTrunk(g: Grid, top: number, rnd: Rng, snow: boolean) {
   }
 }
 
-/** 冬天的秃树：主干上分出四五根主枝（2 px 粗），每根再分叉一次；主枝上沿一条雪 */
+/** 冬天的秃树：主干上方先分左右两根 2 px 粗的主枝，主枝上再向外分 1 px 细枝，走向都朝外上，不交叉；雪落在枝上沿 */
 function paintBareTree(g: Grid, rnd: Rng, shape: TreeShape) {
   const w = ramp('wood');
   const sn = ramp('snow');
   const ink = ramp('ink').base;
-  const segs: [number, number, number][] = []; // x, y, depth
-  const branch = (x: number, y: number, dx: number, dy: number, len: number, depth: number) => {
+  const spread = shape === 'round' ? 1 : 0.65;
+  const mains: [number, number][] = [];
+  const twigs: [number, number][] = [];
+  const line = (x: number, y: number, dx: number, dy: number, len: number, thick: boolean, out: [number, number][]) => {
     let cx = x;
     let cy = y;
+    let last: [number, number] = [x, y];
     for (let i = 0; i < len; i++) {
       const px = Math.round(cx);
       const py = Math.round(cy);
-      g.set(px, py, depth === 0 ? w.base : w.dark);
-      if (depth === 0) g.set(px + 1, py, w.dark);
-      segs.push([px, py, depth]);
+      g.set(px, py, thick ? w.base : w.dark);
+      if (thick) g.set(px + 1, py, w.dark);
+      out.push([px, py]);
+      last = [px, py];
       cx += dx;
       cy += dy;
     }
-    if (depth < 2 && len > 4) {
-      const ex = Math.round(cx);
-      const ey = Math.round(cy);
-      branch(ex, ey, dx * 0.8 + (rnd() < 0.5 ? -0.6 : 0.6), dy * 0.9, Math.max(3, len - irange(rnd, 3, 4)), depth + 1);
-      const mx = Math.round(x + dx * (len >> 1));
-      const my = Math.round(y + dy * (len >> 1));
-      branch(mx, my, dx < 0 ? -1 : 1, -0.7, Math.max(3, len - irange(rnd, 4, 5)), depth + 1);
-    }
+    return last;
   };
   paintTrunk(g, 27, rnd, true);
-  const spread = shape === 'round' ? 1 : 0.7;
-  branch(14, 27, -0.9 * spread, -0.8, 11, 0);
-  branch(17, 26, 0.9 * spread, -0.8, 11, 0);
-  branch(15, 25, -0.35 * spread, -1, 12, 0);
-  branch(16, 24, 0.4 * spread, -1, 12, 0);
-  branch(13, 30, -1 * spread, -0.35, 7, 0);
-  branch(18, 30, 1 * spread, -0.35, 7, 0);
-  // 描边（枝的外圈）
+  // 两根主枝：从干顶分开，向左上 / 右上
+  const L = line(14, 27, -0.55 * spread, -1, 15, true, mains);
+  const R = line(17, 27, 0.55 * spread, -1, 15, true, mains);
+  // 主枝顶端继续细枝
+  line(L[0], L[1] - 1, -0.4 * spread, -1, 5, false, twigs);
+  line(R[0] + 1, R[1] - 1, 0.4 * spread, -1, 5, false, twigs);
+  // 每根主枝上向外分 3 根细枝，起点沿主枝错开，走向朝外上
+  for (let k = 0; k < 5; k++) {
+    const t = 2 + k * 3;
+    const lx = Math.round(14 - 0.55 * spread * t);
+    const ly = 27 - t;
+    const rx = Math.round(17 + 0.55 * spread * t) + 1;
+    const ry = 27 - t;
+    const len = 5 + irange(rnd, 0, 3);
+    line(lx - 1, ly, -1 * spread, -0.45 - k * 0.12, len, false, twigs);
+    line(rx + 1, ry, 1 * spread, -0.45 - k * 0.12, len, false, twigs);
+  }
+  // 中间一根短细枝向上
+  line(16, 26, 0.05, -1, 6, false, twigs);
+  // 描边
   const src = g.clone();
   for (let y = 0; y < TREE_H; y++) for (let x = 0; x < TREE_W; x++) {
     if (src.get(x, y)) continue;
     const n = src.get(x - 1, y) ?? src.get(x + 1, y) ?? src.get(x, y - 1) ?? src.get(x, y + 1);
     if (n && n !== ink && n !== sn.light && n !== sn.base) g.set(x, y, ink);
   }
-  // 雪：只落在枝的上沿（上方是空的地方），主枝隔一粒一粒，次枝更稀；枝头一小团
+  // 雪：主枝上沿连续一条，细枝隔一粒；枝头一小团
   const isWood = (c: string | null) => c === w.base || c === w.dark;
-  for (const [px, py, depth] of segs) {
-    const above = g.get(px, py - 1);
-    if (isWood(above)) continue;
-    if (depth === 0 ? px % 2 === 0 : (px + py) % 3 === 0) g.set(px, py - 1, sn.light);
-  }
-  // 枝头雪团：找枝的末端（上方 / 左右都不是木）
-  for (const [px, py, depth] of segs) {
-    if (depth === 0) continue;
-    if (!isWood(g.get(px, py - 1)) && !isWood(g.get(px - 1, py - 1)) && !isWood(g.get(px + 1, py - 1)) && (px * 7 + py * 3) % 4 === 0) {
-      g.set(px, py - 1, sn.light);
-      g.set(px + 1, py - 1, sn.base);
-    }
-  }
+  for (const [px, py] of mains) if (!isWood(g.get(px, py - 1))) { g.set(px, py - 1, sn.light); g.set(px + 1, py - 1, sn.base); }
+  for (const [px, py] of twigs) if (!isWood(g.get(px, py - 1)) && (px + py) % 2 === 0) g.set(px, py - 1, sn.light);
 }
 
 export function treeSprite(season: Season, shape: TreeShape, frame = 0, seed = 0): Grid {
@@ -278,15 +285,20 @@ export function treeSprite(season: Season, shape: TreeShape, frame = 0, seed = 0
   return g;
 }
 
-/** 树影：28×10 椭圆，棋盘抖动的地面暗阶；秋天再落几片叶子 */
+/** 树影：28×10 实心椭圆（当季草地暗阶，冬用雪暗阶），只在最外一圈棋盘格软化边缘；秋天再落几片叶子 */
 export function treeShadow(season: Season, seed = 0): Grid {
   const gr = SEASON_RAMPS[season].grass;
   const g = new Grid(28, 10);
-  const shade = season === 'winter' ? gr.dark : gr.dark;
+  const shade = gr.dark;
+  const inside = (x: number, y: number, rx: number, ry: number) => {
+    const dx = (x + 0.5 - 14) / rx;
+    const dy = (y + 0.5 - 5) / ry;
+    return dx * dx + dy * dy <= 1;
+  };
   for (let y = 0; y < 10; y++) for (let x = 0; x < 28; x++) {
-    const dx = (x + 0.5 - 14) / 14;
-    const dy = (y + 0.5 - 5) / 5;
-    if (dx * dx + dy * dy <= 1 && (x + y) % 2 === 0) g.set(x, y, shade);
+    if (!inside(x, y, 14, 5)) continue;
+    if (inside(x, y, 12.5, 4)) g.set(x, y, shade);
+    else if ((x + y) % 2 === 0) g.set(x, y, shade);
   }
   if (season === 'autumn') {
     const rnd = makeRng(seed, 5, 803);
