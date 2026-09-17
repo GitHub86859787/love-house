@@ -160,3 +160,14 @@ a {
     transform: translateY(-2px);
   }
 }
+
+/* 截图模式（预览页 ?shot=1）：去掉顶栏底栏，页面不限宽 */
+html[data-shot] nav,
+html[data-shot] header {
+  display: none !important;
+}
+
+html[data-shot] main {
+  max-width: none !important;
+  padding-top: 8px !important;
+}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Page, PageHeader } from '@/app/Layout';
 import { Panel, Inset } from '@/ui/Panel';
@@ -40,6 +40,15 @@ export function PreviewPage() {
   const [season, setSeason] = useState<Season | 'auto'>((params.get('season') as Season) || 'auto');
   const [scale, setScale] = useState<Scale>(params.get('scale') === '1' ? 1 : 3);
   const s: Season = season === 'auto' ? currentSeason() : season;
+  // 截图模式：隐藏顶栏 / 底栏，页面不限宽，让 3× 图块表完整露出来
+  const shot = params.get('shot') === '1';
+  useEffect(() => {
+    if (!shot) return;
+    document.documentElement.dataset.shot = '1';
+    return () => {
+      delete document.documentElement.dataset.shot;
+    };
+  }, [shot]);
 
   return (
     <Page>
