@@ -4,7 +4,8 @@ import { db } from '@/db/db';
 import { sortByAffection } from '@/db/persons';
 import { useSettings } from '@/db/settings';
 import { Page, PageHeader } from '@/app/Layout';
-import { Panel, Inset } from '@/ui/Panel';
+import { Panel } from '@/ui/Panel';
+import { TaskBoard } from '@/features/quests/TaskBoard';
 import { Button } from '@/ui/Button';
 import { VillageScene } from '@/features/persons/VillageScene';
 import { PersonCard } from '@/features/persons/PersonCard';
@@ -43,13 +44,7 @@ export function HomePage() {
         </div>
       )}
 
-      <Panel title="今日任务板">
-        <Inset>
-          <p style={{ color: 'var(--ink-soft)', fontSize: 'var(--fs-sm)' }}>
-            {sorted.length === 0 ? '任务板空空的。先认识几位村民，任务会自动出现。' : '任务系统将在阶段 3 开放。'}
-          </p>
-        </Inset>
-      </Panel>
+      <TaskBoard persons={sorted} />
 
       <Button variant="primary" block iconName="plus" onClick={() => nav('/person/new')}>
         认识新村民

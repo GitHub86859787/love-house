@@ -11,8 +11,12 @@ export interface Settings {
   graceDays: Record<RelationType, number>;
   /** 音效（阶段 3） */
   soundEnabled: boolean;
-  /** 本命年提醒（阶段 3） */
+  /** 本命年提醒 */
   benmingnianReminder: boolean;
+  /** 关闭的节日 id */
+  disabledHolidays: string[];
+  /** 首次使用日期 */
+  firstUseDate?: string;
   /** 最近一次导出备份时间 */
   lastExportAt?: number;
   /** 上次衰减结算的日期 */
@@ -25,6 +29,7 @@ export const DEFAULT_SETTINGS: Settings = {
   graceDays: Object.fromEntries(Object.entries(RELATIONS).map(([k, v]) => [k, v.staleDays])) as Record<RelationType, number>,
   soundEnabled: true,
   benmingnianReminder: true,
+  disabledHolidays: [],
 };
 
 const KEY = 'app';

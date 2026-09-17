@@ -40,8 +40,6 @@ export const SCORING = {
 
   /** 衰减：超过宽限天数后，每天未互动扣分（只掉到当前整心底部） */
   decayPerDay: 2,
-  /** 超过多少天不联系，头像变灰挂问号 */
-  ghostAfterDays: 30,
   /** 手动加减心的步长 */
   manualHeartStep: 250,
 } as const;

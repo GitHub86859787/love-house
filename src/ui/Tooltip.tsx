@@ -28,8 +28,10 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
 
   let style: React.CSSProperties | undefined;
   if (tip) {
-    const w = 220;
-    const left = Math.max(8, Math.min(window.innerWidth - w - 8, tip.x - w / 2));
+    // 面板内边缘约在 28px 处（页面留白 12 + 木框 8 + 内边距），提示框不越过它
+    const margin = 28;
+    const w = Math.min(220, window.innerWidth - margin * 2);
+    const left = Math.max(margin, Math.min(window.innerWidth - w - margin, tip.x - w / 2));
     const top = tip.y - 96 < 8 ? tip.y + 24 : tip.y - 96;
     style = { left, top, width: w };
   }

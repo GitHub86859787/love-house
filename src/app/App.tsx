@@ -7,6 +7,8 @@ import { SettingsPage } from '@/pages/SettingsPage';
 import { CollectionPage } from '@/pages/CollectionPage';
 import { RecordPage } from '@/pages/RecordPage';
 import { TooltipProvider } from '@/ui/Tooltip';
+import { MilestoneWatcher } from '@/features/milestones/MilestoneWatcher';
+import { AchievementWatcher } from '@/features/collection/AchievementWatcher';
 import { ToastProvider } from '@/ui/Toast';
 
 const router = createHashRouter([
@@ -29,6 +31,8 @@ export function App() {
     <ToastProvider>
       <TooltipProvider>
         <RouterProvider router={router} />
+        <MilestoneWatcher />
+        <AchievementWatcher />
       </TooltipProvider>
     </ToastProvider>
   );

@@ -10,7 +10,8 @@ import { Input } from '@/ui/Field';
 import { Modal } from '@/ui/Modal';
 import { Sprite } from '@/pixel/Sprite';
 import { icon } from '@/pixel/sprites/icons';
-import { formatDateTime } from '@/lib/date';
+import { formatDate, formatDateTime } from '@/lib/date';
+import { TierIcon } from '@/ui/TierIcon';
 import { useToast } from '@/ui/Toast';
 
 function PointsBadge({ points }: { points: number }) {
@@ -83,13 +84,14 @@ export function TimelineTab({ person, onRecord }: { person: Person; onRecord: ()
                 {!system && <PointsBadge points={it.points} />}
               </div>
               {it.gift && it.type === 'gift' && (
-                <div style={{ fontSize: 'var(--fs-sm)', color: TIERS[it.gift.tier].color }}>
-                  {TIERS[it.gift.tier].icon} 「{TIERS[it.gift.tier].reaction}」
+                <div style={{ fontSize: 'var(--fs-sm)', color: TIERS[it.gift.tier].color, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <TierIcon tier={it.gift.tier} scale={1} />
+                  「{TIERS[it.gift.tier].reaction}」
                 </div>
               )}
               {it.memo && <div style={{ fontSize: 'var(--fs-sm)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{it.memo}</div>}
               <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>
-                {formatDateTime(it.at)}
+                {formatDate(it.at)}
                 {it.reason && !system && ` · ${it.reason}`}
                 {it.points !== it.computedPoints && !system && ' · 已手动改分'}
               </div>

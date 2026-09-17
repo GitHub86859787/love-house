@@ -1,0 +1,131 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.giftCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+  background: var(--white);
+  border: 2px solid var(--wood-light);
+  cursor: pointer;
+  text-align: center;
+}
+
+.giftName {
+  font-size: var(--fs-sm);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.giftMeta {
+  font-size: 10px;
+  color: var(--ink-soft);
+}
+
+/* 人物卡：轻 3D 翻转 */
+.flip {
+  perspective: 600px;
+  height: 200px;
+  cursor: pointer;
+}
+
+.flipInner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 320ms steps(8);
+  transform-style: preserve-3d;
+}
+
+.flipped .flipInner {
+  transform: rotateY(180deg);
+}
+
+.face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  background: var(--paper);
+  border: 4px solid var(--wood-dark);
+  box-shadow: inset 0 0 0 2px var(--wood-light);
+}
+
+.faceGold {
+  border-color: var(--gold-dark);
+  box-shadow:
+    inset 0 0 0 2px var(--gold),
+    0 0 0 2px var(--gold-dark);
+}
+
+.back {
+  transform: rotateY(180deg);
+  justify-content: flex-start;
+  overflow: hidden;
+}
+
+.checklist {
+  width: 100%;
+  font-size: 10px;
+  line-height: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.check {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.checkOff {
+  color: var(--ink-soft);
+  opacity: 0.6;
+}
+
+.level {
+  font-size: var(--fs-sm);
+  color: var(--gold-dark);
+}
+
+.ach {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  background: var(--white);
+  border: 2px solid var(--paper-deep);
+}
+
+.achLocked {
+  opacity: 0.55;
+  filter: grayscale(1);
+}
+
+.achBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.achTitle {
+  font-size: var(--fs-sm);
+}
+
+.achDesc {
+  font-size: 10px;
+  color: var(--ink-soft);
+}

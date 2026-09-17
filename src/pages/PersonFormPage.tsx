@@ -3,12 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/db';
 import type { AvatarConfig, Birth } from '@/db/types';
-import { createPerson, updatePerson } from '@/db/persons';
+import { createPerson, deletePerson, updatePerson } from '@/db/persons';
 import { addInteraction } from '@/db/interactions';
 import { useSettings } from '@/db/settings';
 import { RELATIONS, RELATION_ORDER, type RelationType } from '@/config/relations';
 import { Page, PageHeader } from '@/app/Layout';
 import { Panel } from '@/ui/Panel';
+import { Modal } from '@/ui/Modal';
 import { Button } from '@/ui/Button';
 import { Field, Input, Row, Select } from '@/ui/Field';
 import { useToast } from '@/ui/Toast';
@@ -57,6 +58,8 @@ export function PersonFormPage() {
   const existing = useLiveQuery(() => (id ? db.persons.get(id) : undefined), [id]);
   const [form, setForm] = useState<FormState>(() => ({ ...EMPTY, avatar: randomAvatar('friend') }));
   const [loaded, setLoaded] = useState(!editing);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteName, setDeleteName] = useState('');
 
   useEffect(() => {
     if (!existing || loaded) return;
@@ -228,6 +231,36 @@ export function PersonFormPage() {
       <Button variant="primary" block onClick={submit}>
         {editing ? '保存' : '搬进村里'}
       </Button>
+
+      {editing && existing && (
+        <>
+          <div style={{ height: 24 }} />
+          <Button variant="ghost" block iconName="trash" onClick={() => { setDeleteName(''); setConfirmDelete(true); }}>
+            让 TA 搬走（删除）
+          </Button>
+          <Modal open={confirmDelete} title="确定删除？" onClose={() => setConfirmDelete(false)}>
+            <p>{existing.name} 的资料、笔记和互动记录都会被删除，无法恢复。输入 TA 的名字确认：</p>
+            <Input value={deleteName} onChange={(e) => setDeleteName(e.target.value)} placeholder={existing.name} />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button block variant="ghost" onClick={() => setConfirmDelete(false)}>
+                取消
+              </Button>
+              <Button
+                block
+                variant="danger"
+                disabled={deleteName.trim() !== existing.name}
+                onClick={async () => {
+                  await deletePerson(existing.id);
+                  toast(`${existing.name} 搬走了`);
+                  nav('/', { replace: true });
+                }}
+              >
+                删除
+              </Button>
+            </div>
+          </Modal>
+        </>
+      )}
     </Page>
   );
 }

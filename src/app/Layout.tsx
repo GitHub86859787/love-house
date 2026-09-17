@@ -4,6 +4,8 @@ import styles from './App.module.css';
 import { Sprite } from '@/pixel/Sprite';
 import { icon, type IconName } from '@/pixel/sprites/icons';
 import { runDecayIfNeeded } from '@/features/scoring/runtime';
+import { useSettings } from '@/db/settings';
+import { setSoundEnabled } from '@/audio/sound';
 
 const NAV_LEFT: { to: string; label: string; icon: IconName }[] = [
   { to: '/', label: '村口', icon: 'village' },
@@ -27,6 +29,8 @@ function NavItem({ to, label, icon: name }: { to: string; label: string; icon: I
 export function Layout() {
   const nav = useNavigate();
   const loc = useLocation();
+  const settings = useSettings();
+  useEffect(() => setSoundEnabled(settings.soundEnabled), [settings.soundEnabled]);
 
   // 打开 App / 回到前台时结算衰减（每天一次）
   useEffect(() => {

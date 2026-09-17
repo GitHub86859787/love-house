@@ -7,6 +7,7 @@ import { sortByAffection } from '@/db/persons';
 import { addInteraction, previewScore } from '@/db/interactions';
 import { INTERACTIONS, SELECTABLE_TYPES } from '@/config/interactions';
 import { TIER_ORDER, TIERS } from '@/config/reactions';
+import { TierIcon } from '@/ui/TierIcon';
 import { SCORING } from '@/config/scoring';
 import { matchGift, type ScoreResult } from '@/features/scoring/engine';
 import { ScoreAnimation } from '@/features/interactions/ScoreAnimation';
@@ -106,7 +107,8 @@ export function RecordPage() {
 
   const stepIndex = { person: 0, type: 1, detail: 2, result: 3 }[step];
   const giftLike = type === 'gift' || type === 'receivedGift';
-  const suggestions = person ? person.preferences.filter((p) => p.source !== 'fortune' && (p.category === 'food' || p.category === 'item')).slice(0, 8) : [];
+  const suggestions = person ? person.preferences.filter((p) => p.source !== 'fortune' && (p.tier === 'love' || p.tier === 'like') && (p.category === 'food' || p.category === 'item')).slice(0, 8) : [];
+  const giftIsDisliked = type === 'gift' && matchedId && (giftTier === 'dislike' || giftTier === 'hate');
 
   return (
     <Page>
@@ -179,13 +181,13 @@ export function RecordPage() {
                   <div className={styles.suggest}>
                     {suggestions.map((p) => (
                       <Chip key={p.id} active={p.name === giftName} onClick={() => setGiftName(p.name)}>
-                        {TIERS[p.tier].icon} {p.name}
+                        <TierIcon tier={p.tier} scale={1} /> {p.name}
                       </Chip>
                     ))}
                   </div>
                 )}
                 {type === 'gift' && (
-                  <Field label={matchedId ? '自动匹配到了 TA 的喜好，可改档' : '没匹配到喜好，按「一般」，可改档'}>
+                  <Field label={giftIsDisliked ? '⚠ 这是 TA 讨厌的东西，确定要送吗？' : matchedId ? '自动匹配到了 TA 的喜好，可改档' : '没匹配到喜好，按「一般」，可改档'}>
                     <div className={styles.tierRow}>
                       {TIER_ORDER.map((t) => (
                         <button
@@ -197,7 +199,9 @@ export function RecordPage() {
                             setTierTouched(true);
                           }}
                         >
-                          <div>{TIERS[t].icon}</div>
+                          <div style={{ height: 20 }}>
+                            <TierIcon tier={t} scale={2} />
+                          </div>
                           <div style={{ color: TIERS[t].color }}>{TIERS[t].label}</div>
                         </button>
                       ))}
@@ -256,7 +260,7 @@ export function RecordPage() {
             points={result.points}
             iconName={type === 'gift' ? 'gift' : INTERACTIONS[type].icon}
             iconColor={type === 'gift' ? TIERS[giftTier].color : '#f5c542'}
-            onDone={() => setAnimating(false)}
+            onHit={() => setAnimating(false)}
           />
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
             <HeartBar points={animating ? result.before : result.after} scale={2} showText />

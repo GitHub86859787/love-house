@@ -54,3 +54,19 @@ export const HEART_SMALL = new Grid(8, 8).paste(
   ['.OO..OO.', 'ORROORRO', 'ORRRRRRO', 'ORRRRRRO', '.ORRRRO.', '..ORRO..', '...OO...', '........'],
   { O: '#7a1018', R: '#e6323c' },
 );
+
+/** 小号 8×8 叉，用于"讨厌 / 最讨厌"档位图标 */
+export const CROSS_SMALL = new Grid(8, 8).paste(
+  0,
+  0,
+  ['OO....OO', 'OXO..OXO', '.OXOOXO.', '..OXXO..', '..OXXO..', '.OXOOXO.', 'OXO..OXO', 'OO....OO'],
+  { O: '#2b2b3a', X: '#5d7fa3' },
+);
+
+/** 小号 8×8 空心圆，用于"一般"档位图标 */
+export const CIRCLE_SMALL = new Grid(8, 8).paste(
+  0,
+  0,
+  ['..OOOO..', '.O....O.', 'O......O', 'O......O', 'O......O', 'O......O', '.O....O.', '..OOOO..'],
+  { O: '#7a5a3a' },
+);

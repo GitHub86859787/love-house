@@ -6,12 +6,14 @@ import { HeartBar, heartsOf } from '@/ui/HeartBar';
 import { Panel } from '@/ui/Panel';
 import { formatRelative } from '@/lib/date';
 import { isGhost } from './VillageScene';
+import { useSettings } from '@/db/settings';
 import { SCORING } from '@/config/scoring';
 import styles from './PersonCard.module.css';
 
 export function PersonCard({ person }: { person: Person }) {
   const nav = useNavigate();
-  const ghost = isGhost(person);
+  const settings = useSettings();
+  const ghost = isGhost(person, settings);
   return (
     <Panel tight golden={heartsOf(person.affection) >= SCORING.maxHearts} className={styles.card} onClick={() => nav(`/person/${person.id}`)}>
       <div className={`${styles.avatarBox} px-corner-sm`}>

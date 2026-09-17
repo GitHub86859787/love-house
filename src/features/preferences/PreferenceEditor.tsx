@@ -6,6 +6,7 @@ import { Modal } from '@/ui/Modal';
 import { Button } from '@/ui/Button';
 import { Chip, Chips, Field, Input, Select } from '@/ui/Field';
 import { uid } from '@/lib/id';
+import { TierIcon } from '@/ui/TierIcon';
 
 interface Props {
   open: boolean;
@@ -91,7 +92,9 @@ export function PreferenceEditor({ open, initial, defaultTier = 'like', onClose,
                 cursor: 'pointer',
               }}
             >
-              <span style={{ width: 40 }}>{TIERS[t].icon}</span>
+              <span style={{ width: 40, display: 'inline-flex' }}>
+                <TierIcon tier={t} scale={2} />
+              </span>
               <span style={{ width: 48, color: TIERS[t].color }}>{TIERS[t].label}</span>
               <span style={{ color: 'var(--ink-soft)' }}>「{TIERS[t].reaction}」</span>
             </button>

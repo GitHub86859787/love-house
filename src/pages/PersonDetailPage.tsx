@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/db';
-import { deletePerson } from '@/db/persons';
 import { adjustAffection, setAffection } from '@/db/interactions';
 import type { Note } from '@/db/types';
 import { updatePerson } from '@/db/persons';
@@ -21,9 +20,13 @@ import { Avatar } from '@/pixel/avatar/Avatar';
 import { isGhost } from '@/features/persons/VillageScene';
 import { PreferencesTab } from '@/features/preferences/PreferencesTab';
 import { TimelineTab } from '@/features/interactions/TimelineTab';
+import { ReminderSection } from '@/features/quests/ReminderSection';
+import { MilestoneCard } from '@/features/milestones/MilestoneCard';
+import type { MilestoneConfig } from '@/config/milestones';
 import { uid } from '@/lib/id';
 import { formatDateTime, formatRelative } from '@/lib/date';
-import { formatBirth } from '@/lib/birthday';
+import { daysUntilBirthday, formatBirth } from '@/lib/birthday';
+import { useSettings } from '@/db/settings';
 import styles from './PersonDetailPage.module.css';
 
 type Tab = 'prefs' | 'notes' | 'timeline' | 'milestones';
@@ -40,12 +43,13 @@ export function PersonDetailPage() {
   const nav = useNavigate();
   const toast = useToast();
   const person = useLiveQuery(() => db.persons.get(id), [id]);
+  const settings = useSettings();
   const [tab, setTab] = useState<Tab>('prefs');
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleteName, setDeleteName] = useState('');
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [pointsDraft, setPointsDraft] = useState('');
   const [noteDraft, setNoteDraft] = useState('');
+  const [innerDraft, setInnerDraft] = useState<string | null>(null);
+  const [replay, setReplay] = useState<MilestoneConfig | null>(null);
 
   if (person === undefined) {
     return (
@@ -64,7 +68,10 @@ export function PersonDetailPage() {
 
   const hearts = heartsOf(person.affection);
   const golden = hearts >= SCORING.maxHearts;
-  const ghost = isGhost(person);
+  const ghost = isGhost(person, settings);
+  const birthdayDays = person.birth ? daysUntilBirthday(person.birth) : null;
+  const birthdayHint = birthdayDays === null ? '' : birthdayDays === 0 ? ' · 就是今天！' : ` · 还有 ${birthdayDays} 天`;
+  const toNextHeart = person.affection >= SCORING.maxPoints ? null : SCORING.pointsPerHeart - (person.affection % SCORING.pointsPerHeart);
 
   const addNote = async () => {
     const text = noteDraft.trim();
@@ -77,13 +84,6 @@ export function PersonDetailPage() {
 
   const removeNote = async (noteId: string) => {
     await updatePerson(person.id, { notes: person.notes.filter((n) => n.id !== noteId) });
-  };
-
-  const doDelete = async () => {
-    if (deleteName.trim() !== person.name) return;
-    await deletePerson(person.id);
-    toast(`${person.name} 搬走了`);
-    nav('/', { replace: true });
   };
 
   const applyPoints = async () => {
@@ -113,7 +113,10 @@ export function PersonDetailPage() {
               <span className={`${styles.relation} px-corner-sm`}>{RELATIONS[person.relation].label}</span>
             </div>
             <div className={styles.meta}>
-              <span>生日：{person.birth ? formatBirth(person.birth) : '未知'}</span>
+              <span>
+                生日：{person.birth ? formatBirth(person.birth) : '未知'}
+                {birthdayHint}
+              </span>
               {person.metOn && <span>认识于 {person.metOn}</span>}
               <span>{person.lastInteractionAt ? `上次互动 ${formatRelative(person.lastInteractionAt)}` : '还没有互动记录'}</span>
             </div>
@@ -121,6 +124,9 @@ export function PersonDetailPage() {
         </div>
         <div className={styles.heartsRow} onClick={() => { setPointsDraft(String(person.affection)); setAdjustOpen(true); }} role="button" aria-label="调整好感度">
           <HeartBar points={person.affection} scale={2} showText />
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)', marginTop: 4 }}>
+            {toNextHeart === null ? '已满心，进入挚友殿堂' : `距下一颗心还差 ${toNextHeart} 点`}
+          </div>
         </div>
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <Button size="small" variant="ghost" iconName="minus" aria-label="减一颗心" onClick={() => adjustAffection(person.id, -SCORING.manualHeartStep)} />
@@ -160,6 +166,24 @@ export function PersonDetailPage() {
 
         {tab === 'notes' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {(hearts >= 8 || person.milestonesUnlocked.includes(8)) && (
+              <div className="px-corner-sm" style={{ background: '#efe3f7', border: '2px solid #7a4a8a', padding: '8px 12px' }}>
+                <div style={{ fontSize: 'var(--fs-sm)', color: '#7a4a8a', marginBottom: 4 }}>心事 · TA 最近在烦什么 / 在期待什么</div>
+                <Textarea
+                  value={innerDraft ?? person.innerNote ?? ''}
+                  onChange={(e) => setInnerDraft(e.target.value)}
+                  onBlur={async () => {
+                    if (innerDraft !== null && innerDraft !== (person.innerNote ?? '')) {
+                      await updatePerson(person.id, { innerNote: innerDraft.trim() || undefined });
+                      toast('心事记下了');
+                    }
+                    setInnerDraft(null);
+                  }}
+                  placeholder="8 心解锁：写下 TA 最近的烦恼或期待，下次见面前看一眼"
+                  style={{ minHeight: 64 }}
+                />
+              </div>
+            )}
             <Textarea value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} placeholder="随手记一段：今天她说最近迷上手冲咖啡……" />
             <Button variant="primary" onClick={addNote} disabled={!noteDraft.trim()}>
               记下来
@@ -177,14 +201,24 @@ export function PersonDetailPage() {
           </div>
         )}
 
-        {tab === 'timeline' && <TimelineTab person={person} onRecord={() => nav(`/record?person=${person.id}`)} />}
+        {tab === 'timeline' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <ReminderSection person={person} />
+            <TimelineTab person={person} onRecord={() => nav(`/record?person=${person.id}`)} />
+          </div>
+        )}
 
         {tab === 'milestones' && (
           <div>
             {MILESTONES.map((m) => {
               const reached = hearts >= m.hearts;
               return (
-                <div key={m.hearts} className={`${styles.milestone} ${reached ? '' : styles.locked}`}>
+                <div
+                  key={m.hearts}
+                  className={`${styles.milestone} ${reached ? '' : styles.locked}`}
+                  onClick={() => reached && setReplay(m)}
+                  style={{ cursor: reached ? 'pointer' : 'default' }}
+                >
                   <div className={styles.milestoneHearts}>
                     {m.hearts}
                     <span style={{ fontSize: 'var(--fs-sm)' }}>心</span>
@@ -192,20 +226,18 @@ export function PersonDetailPage() {
                   <div style={{ flex: 1 }}>
                     <div>
                       {m.title} {reached ? '✓' : '🔒'}
+                      {reached && <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}> · 点击回看事件卡</span>}
                     </div>
                     <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>{m.description}</div>
                   </div>
                 </div>
               );
             })}
-            <p className={styles.empty}>里程碑事件卡与解锁任务将在阶段 3 开放</p>
           </div>
         )}
       </Panel>
 
-      <Button variant="danger" block iconName="trash" onClick={() => { setDeleteName(''); setConfirmDelete(true); }}>
-        让 TA 搬走（删除）
-      </Button>
+      <MilestoneCard person={person} milestone={replay} onClose={() => setReplay(null)} replay />
 
       <Modal open={adjustOpen} title="调整好感度" onClose={() => setAdjustOpen(false)}>
         <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>每颗心 250 点，满 {SCORING.maxPoints} 点。直接填点数：</p>
@@ -217,20 +249,6 @@ export function PersonDetailPage() {
         </div>
       </Modal>
 
-      <Modal open={confirmDelete} title="确定删除？" onClose={() => setConfirmDelete(false)}>
-        <p>
-          {person.name} 的资料、笔记和互动记录都会被删除，无法恢复。输入 TA 的名字确认：
-        </p>
-        <Input value={deleteName} onChange={(e) => setDeleteName(e.target.value)} placeholder={person.name} />
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Button block variant="ghost" onClick={() => setConfirmDelete(false)}>
-            取消
-          </Button>
-          <Button block variant="danger" onClick={doDelete} disabled={deleteName.trim() !== person.name}>
-            删除
-          </Button>
-        </div>
-      </Modal>
     </Page>
   );
 }

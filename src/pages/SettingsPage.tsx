@@ -3,6 +3,8 @@ import { db } from '@/db/db';
 import { DEFAULT_SETTINGS, updateSettings, useSettings } from '@/db/settings';
 import { RELATIONS, RELATION_ORDER } from '@/config/relations';
 import { SCORING } from '@/config/scoring';
+import { HOLIDAYS } from '@/config/holidays';
+import { play, setSoundEnabled } from '@/audio/sound';
 import { Page, PageHeader } from '@/app/Layout';
 import { Panel, Inset } from '@/ui/Panel';
 import { Button } from '@/ui/Button';
@@ -117,6 +119,39 @@ export function SettingsPage() {
         </Inset>
       </Panel>
 
+      <Panel title="任务板">
+        <Toggle label="本命年提醒" hint="某人进入本命年那年，春节起 30 天内提醒送点红色的东西" checked={settings.benmingnianReminder} onChange={(v) => updateSettings({ benmingnianReminder: v })} />
+        <Inset>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)', marginBottom: 4 }}>节日问候提醒（按适用关系类型出任务）</div>
+          {HOLIDAYS.map((h) => {
+            const on = !settings.disabledHolidays.includes(h.id);
+            const rel = h.relations === 'all' ? '所有人' : h.relations.map((r) => RELATIONS[r].label).join(' / ');
+            return (
+              <Toggle
+                key={h.id}
+                label={`${h.name}${h.lunar ? '（农历）' : ''}`}
+                hint={`提前 ${h.daysBefore} 天 · ${rel}`}
+                checked={on}
+                onChange={(v) => updateSettings({ disabledHolidays: v ? settings.disabledHolidays.filter((x) => x !== h.id) : [...settings.disabledHolidays, h.id] })}
+              />
+            );
+          })}
+        </Inset>
+      </Panel>
+
+      <Panel title="音效">
+        <Toggle
+          label="8-bit 音效"
+          hint="Web Audio 合成，不用外部音频文件"
+          checked={settings.soundEnabled}
+          onChange={(v) => {
+            updateSettings({ soundEnabled: v });
+            setSoundEnabled(v);
+            if (v) play('heartUp');
+          }}
+        />
+      </Panel>
+
       <Panel title="数据">
         <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)', marginBottom: 12 }}>
           所有数据只保存在这台设备的浏览器里。导出 / 导入备份将在后续阶段开放。
@@ -127,7 +162,7 @@ export function SettingsPage() {
       </Panel>
 
       <Panel title="关于">
-        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>人情村 v{__APP_VERSION__} · 阶段 2 核心循环</p>
+        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>人情村 v{__APP_VERSION__} · 阶段 3 游戏感</p>
         <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>字体：缝合像素字体 Fusion Pixel（OFL 许可）；农历：lunar-typescript（MIT）</p>
       </Panel>
 

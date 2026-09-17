@@ -129,17 +129,27 @@ export interface Interaction {
 
 export type QuestType = 'daily' | 'reminder' | 'milestone' | 'custom';
 export type QuestStatus = 'open' | 'done' | 'skipped';
+/** 任务来源规则 */
+export type QuestKind = 'birthday' | 'stale' | 'profile' | 'milestone' | 'holiday' | 'benmingnian' | 'custom' | 'backup';
 
 export interface Quest {
   id: string;
   type: QuestType;
+  kind: QuestKind;
   /** 规则生成的稳定 key，用于去重 */
   ruleKey: string;
   personId?: string;
   title: string;
   description?: string;
+  /** 截止 / 目标日期 YYYY-MM-DD */
   dueDate?: string;
+  /** 从这天起显示 YYYY-MM-DD */
+  showFrom?: string;
   status: QuestStatus;
+  /** "跳过今天"：这天之前不显示 */
+  snoozedUntil?: string;
+  /** 数字越小越靠前 */
+  priority: number;
   createdAt: number;
   resolvedAt?: number;
 }

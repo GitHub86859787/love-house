@@ -36,3 +36,10 @@ export function formatRelative(ts: number, now = Date.now()): string {
   if (months < 12) return `${months} 个月前`;
   return `${Math.floor(days / 365)} 年前`;
 }
+
+/** 只显示日期：今年显示 "9月17日"，往年带年份 */
+export function formatDate(ts: number, now = new Date()): string {
+  const d = new Date(ts);
+  const md = `${d.getMonth() + 1}月${d.getDate()}日`;
+  return d.getFullYear() === now.getFullYear() ? md : `${d.getFullYear()}年${md}`;
+}

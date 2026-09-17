@@ -17,7 +17,7 @@ export function PreferenceChip({ pref, onClick }: Props) {
       tip.show(
         {
           name: pref.name,
-          sub: `${CATEGORIES[pref.category]} · ${TIERS[pref.tier].icon} ${TIERS[pref.tier].label}${pref.note ? ` · ${pref.note}` : ''}`,
+          sub: `${CATEGORIES[pref.category]} · ${TIERS[pref.tier].label}${pref.note ? ` · ${pref.note}` : ''}`,
           reaction: TIERS[pref.tier].reaction,
           reactionColor: TIERS[pref.tier].color,
         },

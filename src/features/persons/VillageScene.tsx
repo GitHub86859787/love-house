@@ -9,23 +9,23 @@ import { GATE, QUESTION_BUBBLE, bush, house, tree } from '@/pixel/sprites/villag
 import { HEART_SMALL } from '@/pixel/sprites/heart';
 import { heartsOf } from '@/ui/HeartBar';
 import { currentSeason, SEASON_PALETTE } from '@/lib/season';
-import { lastContactDate } from '@/features/scoring/decay';
-import { daysBetween } from '@/lib/date';
+import { isStale } from '@/features/scoring/decay';
+import { useSettings, type Settings } from '@/db/settings';
 import styles from './VillageScene.module.css';
 
 interface Props {
   persons: Person[];
 }
 
-/** 超过 30 天没联系变灰：从最后互动日算，零互动的人从认识日 / 建档日算 */
-export function isGhost(p: Person, now = new Date()): boolean {
-  if (p.isMe) return false;
-  return daysBetween(lastContactDate(p), now) > SCORING.ghostAfterDays;
+/** 变灰挂问号：和首页"有一阵没找 XX 了"同一时机，即超过宽限天数 */
+export function isGhost(p: Person, settings: Settings, now = new Date()): boolean {
+  return isStale(p, settings, now);
 }
 
 /** 横向可滑动的小村庄：心多的离村口近 */
 export function VillageScene({ persons }: Props) {
   const nav = useNavigate();
+  const settings = useSettings();
   const season = currentSeason();
   const pal = SEASON_PALETTE[season];
   const treeGrid = useMemo(() => tree(pal.leaf), [pal.leaf]);
@@ -47,7 +47,7 @@ export function VillageScene({ persons }: Props) {
         </div>
         {persons.map((p, i) => {
           const hearts = heartsOf(p.affection);
-          const ghost = isGhost(p);
+          const ghost = isGhost(p, settings);
           const golden = hearts >= SCORING.maxHearts;
           return (
             <div key={p.id} className={styles.slot} onClick={() => nav(`/person/${p.id}`)} role="link" aria-label={p.name}>
