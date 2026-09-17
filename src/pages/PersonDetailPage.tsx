@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { lazyRetry } from '@/app/lazyRetry';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/db';
@@ -25,7 +26,7 @@ import { MilestoneCard } from '@/features/milestones/MilestoneCard';
 import { useNotesAi } from '@/features/ai/NotesAi';
 import { SummaryPanel } from '@/features/ai/SummaryPanel';
 // 排盘 + 本命盘 + 命书这一块按需加载
-const FortuneTab = lazy(() => import('@/features/fortune/FortuneTab').then((m) => ({ default: m.FortuneTab })));
+const FortuneTab = lazyRetry(() => import('@/features/fortune/FortuneTab').then((m) => ({ default: m.FortuneTab })), 'FortuneTab');
 import type { MilestoneConfig } from '@/config/milestones';
 import { uid } from '@/lib/id';
 import { formatDateTime, formatRelative } from '@/lib/date';
