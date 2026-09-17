@@ -1,15 +1,41 @@
 import { describe, expect, it } from 'vitest';
 import { buildChart, chartToText, numerologyOf, shiChenOf, zodiacOf } from './chart';
+import { REFERENCE_CASES, ZODIAC_BOUNDARIES } from './reference';
 
-describe('zodiacOf', () => {
-  it('区间与跨年', () => {
+describe('标准答案表', () => {
+  for (const c of REFERENCE_CASES) {
+    it(`${c.label} → ${c.zodiac} 属${c.shengXiao} ${c.year ?? ''} ${c.month ?? ''} ${c.day ?? ''} ${c.hour ?? ''}`, () => {
+      const chart = buildChart(c.birth, new Date(2026, 8, 17));
+      expect(chart.zodiac?.name).toBe(c.zodiac);
+      expect(chart.shengXiao).toBe(c.shengXiao);
+      const b = chart.bazi!;
+      if (c.year) expect(b.year.gan + b.year.zhi).toBe(c.year);
+      if (c.month) expect(b.month.gan + b.month.zhi).toBe(c.month);
+      if (c.day) expect(b.day.gan + b.day.zhi).toBe(c.day);
+      if (c.hour) expect(b.hour!.gan + b.hour!.zhi).toBe(c.hour);
+    });
+  }
+  for (const z of ZODIAC_BOUNDARIES) {
+    it(`星座边界 ${z.label} → ${z.zodiac}`, () => {
+      expect(zodiacOf(z.month, z.day).name).toBe(z.zodiac);
+      expect(buildChart({ month: z.month, day: z.day }).zodiac?.name).toBe(z.zodiac);
+    });
+  }
+  it('生肖按春节换、年柱按立春换：2024-02-09 属兔但年柱甲辰', () => {
+    const c = buildChart({ year: 2024, month: 2, day: 9 });
+    expect(c.shengXiao).toBe('兔');
+    expect(c.pillarShengXiao).toBe('龙');
+    expect(c.bazi?.year.gan + c.bazi!.year.zhi).toBe('甲辰');
+  });
+  it('其他区间与跨年', () => {
     expect(zodiacOf(3, 21).name).toBe('白羊座');
     expect(zodiacOf(4, 19).name).toBe('白羊座');
     expect(zodiacOf(4, 20).name).toBe('金牛座');
     expect(zodiacOf(12, 25).name).toBe('摩羯座');
     expect(zodiacOf(1, 10).name).toBe('摩羯座');
-    expect(zodiacOf(1, 20).name).toBe('水瓶座');
-    expect(zodiacOf(8, 15).name).toBe('狮子座');
+    expect(zodiacOf(9, 25).name).toBe('天秤座');
+    expect(zodiacOf(10, 23).name).toBe('天秤座');
+    expect(zodiacOf(10, 24).name).toBe('天蝎座');
   });
 });
 
@@ -60,9 +86,15 @@ describe('buildChart', () => {
     expect(c.bazi?.day.gan + c.bazi!.day.zhi).toBe('戊寅');
     expect(c.zodiac?.name).toBe('狮子座');
   });
-  it('本命年：1990 马年生人在 2026（丙午）为本命年；立春前按上一年算', () => {
+  it('本命年按农历年：1990 马年生人在 2026 为本命年；2026 春节（2/17）前不是', () => {
     expect(buildChart({ month: 6, day: 1, year: 1990 }, new Date(2026, 8, 17)).benMingNian).toBe(true);
-    expect(buildChart({ month: 6, day: 1, year: 1990 }, new Date(2026, 0, 10)).benMingNian).toBe(false);
+    expect(buildChart({ month: 6, day: 1, year: 1990 }, new Date(2026, 1, 16)).benMingNian).toBe(false);
+    expect(buildChart({ month: 6, day: 1, year: 1990 }, new Date(2026, 1, 17)).benMingNian).toBe(true);
+  });
+  it('农历输入会给出换算说明', () => {
+    const c = buildChart({ month: 9, day: 25, year: 2001, isLunar: true });
+    expect(c.lunarInputNote).toContain('农历 9 月 25 日');
+    expect(c.zodiac?.name).toBe('天蝎座');
   });
 });
 

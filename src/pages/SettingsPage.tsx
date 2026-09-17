@@ -181,6 +181,15 @@ export function SettingsPage() {
         </Button>
       </Panel>
 
+      <Panel title="排盘自检" tight>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 4 }}>
+          <span style={{ flex: 1, fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>把一组已知生日跑一遍，计算值和标准值并排显示，不一致标红。随时能看排盘有没有坏。</span>
+          <Button size="small" variant="ghost" onClick={() => nav('/selfcheck')}>
+            打开
+          </Button>
+        </div>
+      </Panel>
+
       <Panel title="关于">
         <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>人情村 v{__APP_VERSION__} · 阶段 5 占卜师</p>
         <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>字体：缝合像素字体 Fusion Pixel（OFL 许可）；农历：lunar-typescript（MIT）</p>

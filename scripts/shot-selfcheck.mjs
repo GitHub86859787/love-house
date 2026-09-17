@@ -1,0 +1,16 @@
+import { chromium, devices } from 'playwright';
+const BASE = process.env.SHOT_BASE ?? 'http://localhost:4173/';
+const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', headless: true });
+const ctx = await browser.newContext({ ...devices['iPhone 14'], locale: 'zh-CN' });
+const page = await ctx.newPage();
+page.on('pageerror', (e) => console.error('pageerror', e.message));
+await page.goto(BASE + '#/selfcheck');
+await page.waitForSelector('text=标准答案表');
+await page.waitForTimeout(400);
+await page.screenshot({ path: 'shots/selfcheck-1.png' });
+await page.getByText('试算', { exact: true }).scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollBy(0, -80));
+await page.waitForTimeout(300);
+await page.screenshot({ path: 'shots/selfcheck-2.png' });
+console.log('status:', await page.locator('[role=status], header').first().innerText());
+await browser.close();

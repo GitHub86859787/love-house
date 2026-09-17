@@ -34,6 +34,7 @@ export function FortuneTab({ person }: { person: Person }) {
       <Avatar config={fortuneTellerAvatar} scale={2} />
       <div style={{ flex: 1, fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>
         {chart.level === 0 ? FORTUNE_TELLER.noBirth : `完整度 L${chart.level} · ${chart.levelLabel}`}
+        {chart.lunarInputNote && <div style={{ color: 'var(--danger)' }}>{chart.lunarInputNote}。如果 TA 过的是公历生日，去编辑里取消"农历"。</div>}
         {chart.level > 0 && chart.level < 3 && <div>补充{chart.level === 1 ? '出生年份' : '时辰'}可以看到更多。</div>}
       </div>
     </div>

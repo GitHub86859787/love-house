@@ -101,6 +101,9 @@ export function ChartCards({ chart, systems }: { chart: Chart; systems?: { zodia
             <span>最旺 {b.strongest.join('')}</span>
             {chart.shengXiao && <span>属{chart.shengXiao}{chart.benMingNian ? ' · 今年本命年' : ''}</span>}
           </div>
+          {chart.pillarShengXiao && chart.pillarShengXiao !== chart.shengXiao && (
+            <div style={{ fontSize: 10, color: 'var(--ink-soft)' }}>生肖按春节换（{chart.shengXiao}），年柱按立春换（{chart.pillarShengXiao}年），所以两处不同是正常的。</div>
+          )}
           {!b.hour && <div style={{ fontSize: 10, color: 'var(--ink-soft)' }}>时辰未知，时柱空着。补上时辰能看完整四柱。</div>}
           {systems?.bazi && <p className={styles.text}>{systems.bazi}</p>}
         </div>

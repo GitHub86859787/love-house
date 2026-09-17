@@ -66,6 +66,10 @@ export interface Chart {
   shiChen?: string;
   /** 公历生日（农历生日换算后，用当年） */
   solarText?: string;
+  /** 输入是农历时的换算说明，让"勾错了农历"一眼能看出来 */
+  lunarInputNote?: string;
+  /** 年柱地支对应的生肖（按立春切换），与 shengXiao（按春节切换）可能不同 */
+  pillarShengXiao?: string;
 }
 
 const ZODIACS: (ZodiacInfo & { from: [number, number]; to: [number, number] })[] = [
@@ -214,17 +218,22 @@ export function buildChart(birth: Birth | undefined, today = new Date()): Chart 
   }
   chart.zodiac = zodiacOf(sm, sd);
   chart.solarText = `${sm} 月 ${sd} 日`;
+  if (birth.isLunar) chart.lunarInputNote = `按农历 ${birth.month} 月 ${birth.day} 日换算为公历 ${sm} 月 ${sd} 日${birth.year ? '' : '（按今年）'}`;
   if (!birth.year) return chart;
 
   const full = { ...birth, year: birth.year };
   const solar = birthToSolar(full);
   const lunar = solar.getLunar();
-  chart.shengXiao = lunar.getYearShengXiaoByLiChun();
+  // 生肖：按农历年切换（春节当天换）
+  chart.shengXiao = lunar.getYearShengXiao();
+  // 年柱：按立春切换（EightChar 内部按节气），它对应的生肖单独记
+  chart.pillarShengXiao = lunar.getYearShengXiaoByLiChun();
   chart.numerology = numerologyOf(solar.getYear(), solar.getMonth(), solar.getDay());
   chart.bazi = baziOf(full, level === 3);
   if (level === 3 && birth.hour != null) chart.shiChen = shiChenOf(birth.hour);
+  // 本命年：今年农历年的生肖 == 出生农历年的生肖（同样按春节切换）
   const nowLunar = Solar.fromYmd(today.getFullYear(), today.getMonth() + 1, today.getDate()).getLunar();
-  chart.benMingNian = nowLunar.getYearShengXiaoByLiChun() === chart.shengXiao;
+  chart.benMingNian = nowLunar.getYearShengXiao() === chart.shengXiao;
   return chart;
 }
 
@@ -232,7 +241,8 @@ export function buildChart(birth: Birth | undefined, today = new Date()): Chart 
 export function chartToText(chart: Chart): string {
   const lines: string[] = [`完整度：L${chart.level}（${chart.levelLabel}）`];
   if (chart.zodiac) lines.push(`星座：${chart.zodiac.name}（${chart.zodiac.element}象，守护星${chart.zodiac.planet}）`);
-  if (chart.shengXiao) lines.push(`生肖：${chart.shengXiao}${chart.benMingNian ? '（今年本命年）' : ''}`);
+  if (chart.lunarInputNote) lines.push(`生日：${chart.lunarInputNote}`);
+  if (chart.shengXiao) lines.push(`生肖：${chart.shengXiao}（按农历年）${chart.benMingNian ? '，今年本命年' : ''}${chart.pillarShengXiao && chart.pillarShengXiao !== chart.shengXiao ? `；年柱按立春为${chart.pillarShengXiao}年` : ''}`);
   if (chart.numerology) lines.push(`生命灵数：主数 ${chart.numerology.master}${chart.numerology.master !== chart.numerology.reduced ? `（化简 ${chart.numerology.reduced}）` : ''}，计算：${chart.numerology.steps}`);
   if (chart.bazi) {
     const b = chart.bazi;

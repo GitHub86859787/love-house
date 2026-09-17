@@ -25,9 +25,10 @@ export function birthdayInYear(birth: Birth, solarYear: number): Date {
     const inYear = candidates.find((d) => d.getFullYear() === solarYear);
     return inYear ?? candidates[0];
   }
-  // 2 月 29 日在平年退到 2 月 28 日
+  // 2 月 29 日在平年退到 2 月 28 日：month 是 1–12，new Date 的月份是 0–11；
+  // new Date(y, m, 0) 取的是"第 m 个月（0 起）"的前一天，即 1 起的第 m 个月的最后一天
   const d = new Date(solarYear, birth.month - 1, birth.day);
-  if (d.getMonth() !== birth.month - 1) return new Date(solarYear, birth.month - 1, 0);
+  if (d.getMonth() !== birth.month - 1) return new Date(solarYear, birth.month, 0);
   return d;
 }
 
