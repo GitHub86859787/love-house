@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Page, PageHeader } from '@/app/Layout';
 import { Panel, Inset } from '@/ui/Panel';
 import { Button } from '@/ui/Button';
@@ -30,11 +30,15 @@ function Px({ grid, scale, title }: { grid: Grid; scale: number; title?: string 
   return <img src={src} width={grid.w * scale} height={grid.h * scale} alt={title ?? ''} title={title} className={styles.px} draggable={false} />;
 }
 
-/** 隐藏的场景预览页：色卡与各类图块的 1× / 3× 图块表，逐类验收用 */
+type Scale = 1 | 3;
+
+/** 隐藏的场景预览页；支持 URL 参数 ?tab=ground&season=spring&scale=3 供截图脚本直达 */
 export function PreviewPage() {
   const nav = useNavigate();
-  const [tab, setTab] = useState<Tab>('palette');
-  const [season, setSeason] = useState<Season | 'auto'>('auto');
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState<Tab>((params.get('tab') as Tab) || 'palette');
+  const [season, setSeason] = useState<Season | 'auto'>((params.get('season') as Season) || 'auto');
+  const [scale, setScale] = useState<Scale>(params.get('scale') === '1' ? 1 : 3);
   const s: Season = season === 'auto' ? currentSeason() : season;
 
   return (
@@ -51,12 +55,19 @@ export function PreviewPage() {
               </option>
             ))}
           </Select>
+          <span className={styles.label}>比例</span>
+          <Button size="small" variant={scale === 1 ? 'primary' : 'ghost'} onClick={() => setScale(1)}>
+            1×
+          </Button>
+          <Button size="small" variant={scale === 3 ? 'primary' : 'ghost'} onClick={() => setScale(3)}>
+            3×
+          </Button>
         </div>
       </Panel>
       <Panel tight>
         <Tabs tabs={TABS} value={tab} onChange={setTab} />
         {tab === 'palette' && <PaletteCard season={s} />}
-        {tab === 'ground' && <GroundSheet season={s} />}
+        {tab === 'ground' && <GroundSheet season={s} scale={scale} />}
       </Panel>
     </Page>
   );
@@ -77,7 +88,7 @@ function Swatch({ color, label }: { color: string; label?: string }) {
 function PaletteCard({ season }: { season: Season }) {
   const sr = SEASON_RAMPS[season];
   return (
-    <div className={styles.sheet}>
+    <div className={styles.sheet} data-shot="palette">
       <p className={styles.note}>16 个色系 × 三阶 = 48 色。每行：暗 / 基 / 亮 + 描边色（从别的色系借，不新增）。光源左上：亮阶只在上、左侧出现。</p>
       <div className={styles.strip}>
         {FAMILIES.flatMap((f) => [f.dark, f.base, f.light]).map((c) => (
@@ -115,25 +126,24 @@ function PaletteCard({ season }: { season: Season }) {
   );
 }
 
-function GroundSheet({ season }: { season: Season }) {
+function GroundSheet({ season, scale }: { season: Season; scale: Scale }) {
   const items = useMemo(() => groundSheet(season), [season]);
   const demo = useMemo(() => groundDemo(season), [season]);
+  const label = SEASONS.find((x) => x.key === season)?.label;
   return (
-    <div className={styles.sheet}>
-      <p className={styles.note}>拼合样例：草地 + 十字路 + 石板 + 田 + 屋前土地。上 1×，下 3×。</p>
+    <div className={styles.sheet} data-shot="sheet">
+      <p className={styles.note}>
+        地面 · {label} · {scale}×。拼合样例：草地 + 十字路 + 石板 + 田 + 屋前土地。
+      </p>
       <div className={styles.demo}>
-        <Px grid={demo} scale={1} title="1×" />
+        <Px grid={demo} scale={scale} title={`${scale}×`} />
       </div>
-      <div className={styles.demo}>
-        <Px grid={demo} scale={3} title="3×" />
-      </div>
-      <p className={styles.note}>图块表：每块左 1× 右 3×。</p>
-      <div className={styles.grid}>
+      <p className={styles.note}>图块表</p>
+      <div className={scale === 1 ? styles.gridSmall : styles.grid}>
         {items.map((it) => (
           <div key={it.name} className={styles.item}>
             <div className={styles.pair}>
-              <Px grid={it.grid} scale={1} />
-              <Px grid={it.grid} scale={3} />
+              <Px grid={it.grid} scale={scale} />
             </div>
             <div className={styles.itemName}>{it.name}</div>
           </div>
