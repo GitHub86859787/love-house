@@ -249,38 +249,35 @@ function FloraSheet({ season, scale, frame }: { season: Season; scale: Scale; fr
   );
 }
 
-/** 把一栋房子放在草地上看（含烟） */
+/** 把一栋房子放在春天草地上看（含烟，烟囱四季都冒） */
 function houseOnGrass(season: Season, night: boolean, frame: number): Grid {
   const cols = 7;
   const rows = 6;
   const g = new Grid(cols * TILE, rows * TILE);
-  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) g.compose(grassAt(season, x + 30, y + 30), x * TILE, y * TILE);
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) g.compose(grassAt('spring', x + 30, y + 30), x * TILE, y * TILE);
   const ox = 8;
-  const oy = 8;
+  const oy = 14;
   g.compose(oldHouseSprite(season, night, frame), ox, oy);
-  if (season === 'autumn' || season === 'winter') g.compose(smokeSprite(frame), ox + 66, oy - 14);
+  g.compose(smokeSprite(frame), ox + 62, oy - 14);
   return g;
 }
 
-function BuildingSheet({ season, scale, frame }: { season: Season; scale: Scale; frame: number }) {
-  const day = useMemo(() => houseOnGrass(season, false, frame), [season, frame]);
-  const night = useMemo(() => houseOnGrass(season, true, frame), [season, frame]);
-  const label = SEASONS.find((x) => x.key === season)?.label;
+function BuildingSheet({ scale, frame }: { season: Season; scale: Scale; frame: number }) {
+  const day = useMemo(() => houseOnGrass('spring', false, frame), [frame]);
+  const dusk = useMemo(() => houseOnGrass('autumn', true, frame), [frame]);
   void OLDHOUSE_W;
   void OLDHOUSE_H;
   return (
     <div className={styles.sheet} data-shot="sheet">
-      <p className={styles.note}>
-        建筑 · 老宅 · {label} · {scale}× · 左白天 / 右夜晚亮窗（夜晚只换窗，整体换色表在第 6 类）
-      </p>
+      <p className={styles.note}>建筑 · 老宅 · {scale}× · 左：春天白天 / 右：秋天傍晚亮灯（整体换色表在第 6 类，这里只亮窗和灯）</p>
       <div className={styles.demo} data-shot="extra" style={{ display: 'flex', gap: 12 }}>
-        <Px grid={day} scale={scale} title="白天" />
-        <Px grid={night} scale={scale} title="夜晚" />
+        <Px grid={day} scale={scale} title="春 白天" />
+        <Px grid={dusk} scale={scale} title="秋 傍晚" />
       </div>
       <p className={styles.note}>1× 自检</p>
       <div className={styles.demo} style={{ display: 'flex', gap: 12 }}>
         <Px grid={day} scale={1} />
-        <Px grid={night} scale={1} />
+        <Px grid={dusk} scale={1} />
       </div>
     </div>
   );
