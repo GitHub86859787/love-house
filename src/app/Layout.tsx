@@ -8,7 +8,6 @@ import { getSettings, updateSettings, useSettings } from '@/db/settings';
 import { toDateKey } from '@/lib/date';
 import { setSoundEnabled } from '@/audio/sound';
 import { ToastLine } from '@/ui/Toast';
-import { Tutorial } from '@/features/tutorial/Tutorial';
 
 const NAV_LEFT: { to: string; label: string; icon: IconName }[] = [
   { to: '/', label: '村口', icon: 'village' },
@@ -58,7 +57,6 @@ export function Layout() {
     <div className={styles.app}>
       <div className={styles.statusBand} aria-hidden="true" />
       <Outlet />
-      <Tutorial />
       <nav className={styles.nav}>
         {NAV_LEFT.map((n) => (
           <NavItem key={n.to} {...n} />

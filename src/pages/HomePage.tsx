@@ -6,6 +6,7 @@ import { useSettings } from '@/db/settings';
 import { Page, PageHeader } from '@/app/Layout';
 import { Panel } from '@/ui/Panel';
 import { TaskBoard } from '@/features/quests/TaskBoard';
+import { Tutorial } from '@/features/tutorial/Tutorial';
 import { Button } from '@/ui/Button';
 import { VillageScene } from '@/features/persons/VillageScene';
 import { buildVillageModel } from '@/features/village/model';
@@ -30,6 +31,8 @@ export function HomePage() {
       <PageHeader title="人情村" subtitle={dateText} />
 
       <VillageScene model={model} />
+
+      <Tutorial />
 
       {stale.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

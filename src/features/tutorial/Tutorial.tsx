@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { db } from '@/db/db';
 import { updateSettings, useSettings } from '@/db/settings';
 import { FORTUNE_TELLER } from '@/config/fortune-prompt';
@@ -23,11 +23,10 @@ const STEPS: Step[] = [
   { n: 3, text: '村东头那顶帐篷是我的。带着 TA 的生辰来，我给 TA 写一本命书。不来也不碍事，村子照样过。', action: '去帐篷看看', to: '/fortune' },
 ];
 
-/** 首次使用教程：星婆婆三步引导，只在村口显示（别的页面会盖住表单），挂在底栏上方；三步都自然完成或点跳过就不再出现 */
+/** 首次使用教程：星婆婆三步引导，作为村口版面里的一块（村庄场景下方、任务板上方）；三步都自然完成或点跳过就不再出现 */
 export function Tutorial() {
   const settings = useSettings();
   const nav = useNavigate();
-  const loc = useLocation();
   const personCount = useLiveQuery(() => db.persons.filter((p) => !p.isMe).count(), []);
   const interactionCount = useLiveQuery(() => db.interactions.count(), []);
   const [minimized, setMinimized] = useState(false);
@@ -49,7 +48,7 @@ export function Tutorial() {
 
   useEffect(() => setMinimized(false), [step?.n]);
 
-  if (settings.tutorialDone || !step || loc.pathname !== '/') return null;
+  if (settings.tutorialDone || !step) return null;
 
   if (minimized) {
     return (
