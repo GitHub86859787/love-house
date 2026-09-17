@@ -11,13 +11,15 @@ import { currentSeason, type Season } from '@/lib/season';
 import { FAMILIES, SEASON_RAMPS } from '../palette';
 import { groundDemo, groundSheet } from '../sprites/ground';
 import { WATER_FRAMES, waterAnimStrip, waterDemo, waterSheet } from '../sprites/water';
+import { floraDemo, floraSheet, treeStrip } from '../sprites/flora';
 import styles from './PreviewPage.module.css';
 
-type Tab = 'palette' | 'ground' | 'water';
+type Tab = 'palette' | 'ground' | 'water' | 'flora';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'palette', label: '色卡' },
   { key: 'ground', label: '1 地面' },
   { key: 'water', label: '2 水系' },
+  { key: 'flora', label: '3 植被小物' },
 ];
 const SEASONS: { key: Season; label: string }[] = [
   { key: 'spring', label: '春' },
@@ -87,6 +89,7 @@ export function PreviewPage() {
         <Tabs tabs={TABS} value={tab} onChange={setTab} />
         {tab === 'palette' && <PaletteCard season={s} />}
         {tab === 'ground' && <GroundSheet season={s} scale={scale} />}
+        {tab === 'flora' && <FloraSheet season={s} scale={scale} frame={frame} />}
         {tab === 'water' && <WaterSheet season={s} scale={scale} frame={frame} animate={animate} onToggle={() => setAnimate((a) => !a)} />}
       </Panel>
     </Page>
@@ -190,7 +193,40 @@ function WaterSheet({ season, scale, frame, animate, onToggle }: { season: Seaso
         <Px grid={demo} scale={scale} title={`${scale}×`} />
       </div>
       <p className={styles.note}>三帧分解（浪花与波纹右移、暗纹反向、鸭子与船起伏）</p>
-      <div className={styles.demo} data-shot="anim">
+      <div className={styles.demo} data-shot="extra">
+        <Px grid={strip} scale={scale} />
+      </div>
+      <p className={styles.note}>图块表</p>
+      <div className={scale === 1 ? styles.gridSmall : styles.grid}>
+        {items.map((it) => (
+          <div key={it.name} className={styles.item}>
+            <div className={styles.pair}>
+              <Px grid={it.grid} scale={scale} />
+            </div>
+            <div className={styles.itemName}>{it.name}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FloraSheet({ season, scale, frame }: { season: Season; scale: Scale; frame: number }) {
+  const f = frame % 2;
+  const strip = useMemo(() => treeStrip(f), [f]);
+  const items = useMemo(() => floraSheet(season, f), [season, f]);
+  const demo = useMemo(() => floraDemo(season, f), [season, f]);
+  const label = SEASONS.find((x) => x.key === season)?.label;
+  return (
+    <div className={styles.sheet} data-shot="sheet">
+      <p className={styles.note}>
+        植被与小物 · {label} · {scale}× · 帧 {f + 1}/2
+      </p>
+      <div className={styles.demo}>
+        <Px grid={demo} scale={scale} title={`${scale}×`} />
+      </div>
+      <p className={styles.note}>大树四季并排：上排圆冠、下排尖冠，带影子（秋天影子上落叶）</p>
+      <div className={styles.demo} data-shot="extra">
         <Px grid={strip} scale={scale} />
       </div>
       <p className={styles.note}>图块表</p>

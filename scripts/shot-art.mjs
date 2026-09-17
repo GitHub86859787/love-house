@@ -21,6 +21,6 @@ for (const s of ['spring', 'summer', 'autumn', 'winter']) {
   await page.goto(`${BASE}#/preview?tab=${cat}&season=${s}&scale=3&shot=1&anim=0`);
   await page.reload();
   await shotEl('[data-shot="sheet"]', `art-${cat}-3x-${s}.png`);
-  if (s === 'spring' && (await page.locator('[data-shot="anim"]').count())) await shotEl('[data-shot="anim"]', `art-${cat}-anim.png`);
+  if (s === 'spring' && (await page.locator('[data-shot="extra"]').count())) await shotEl('[data-shot="extra"]', `art-${cat}-extra.png`);
 }
 await browser.close();

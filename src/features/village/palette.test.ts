@@ -3,6 +3,7 @@ import type { Grid } from '@/pixel/painter';
 import { ALL_COLORS, COLOR_SET, FAMILIES } from './palette';
 import { demoLayout, groundDemo, groundSheet, jaggedProfile } from './sprites/ground';
 import { waterAnimStrip, waterDemo, waterSheet } from './sprites/water';
+import { floraDemo, floraSheet, treeSprite, treeStrip } from './sprites/flora';
 import { hash2, TILE } from './sprites/tile';
 
 function colorsOf(g: Grid): Set<string> {
@@ -127,5 +128,37 @@ describe('水系图块只用调色板颜色，且有密度', () => {
     const c = waterDemo('spring', 2).key();
     expect(a).not.toBe(b);
     expect(b).not.toBe(c);
+  });
+});
+
+describe('植被与小物只用调色板颜色', () => {
+  for (const season of ['spring', 'summer', 'autumn', 'winter'] as const) {
+    it(`${season}`, () => {
+      const grids = [...floraSheet(season, 0).map((i) => i.grid), ...floraSheet(season, 1).map((i) => i.grid), floraDemo(season, 0), treeStrip(0)];
+      for (const g of grids) for (const c of colorsOf(g)) expect(COLOR_SET.has(c), `${season} 有调色板外颜色 ${c}`).toBe(true);
+    });
+  }
+  it('大树两帧只在冠边缘不同，树干一致', () => {
+    const a = treeSprite('summer', 'round', 0);
+    const b = treeSprite('summer', 'round', 1);
+    let diff = 0;
+    for (let y = 0; y < a.h; y++) for (let x = 0; x < a.w; x++) if (a.get(x, y) !== b.get(x, y)) diff++;
+    expect(diff).toBeGreaterThan(10);
+    expect(diff).toBeLessThan(160);
+    // 树干区（底部 8 行中间 8 列）完全一致
+    for (let y = 40; y < 48; y++) for (let x = 12; x < 20; x++) expect(a.get(x, y)).toBe(b.get(x, y));
+  });
+  it('树冠不是椭圆：轮廓每行宽度不单调', () => {
+    const g = treeSprite('summer', 'round', 0);
+    const widths: number[] = [];
+    for (let y = 0; y < 30; y++) {
+      let l = -1;
+      let r = -1;
+      for (let x = 0; x < g.w; x++) if (g.get(x, y)) { if (l < 0) l = x; r = x; }
+      if (l >= 0) widths.push(r - l + 1);
+    }
+    let turns = 0;
+    for (let i = 2; i < widths.length; i++) if (Math.sign(widths[i] - widths[i - 1]) !== Math.sign(widths[i - 1] - widths[i - 2]) && widths[i] !== widths[i - 1]) turns++;
+    expect(turns).toBeGreaterThanOrEqual(3);
   });
 });
