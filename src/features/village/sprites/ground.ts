@@ -1,281 +1,430 @@
 /**
- * 地面图块：草（每季 4 变体）、土路（自动拼接 13 块）、广场石板、田（四季）、屋前土地。
- * 光源左上：亮阶只出现在上 / 左侧，暗阶在下 / 右侧。
+ * 地面图块（返工版）：每一格都是"画"出来的，不是填出来的。
+ * - 草：每格 4–6 簇草茬 + 1–2 块暗阶密处 + 散点，四个变体肉眼可辨（普通 / 暗块多 / 稀疏 / 带小花小石）
+ * - 路：颗粒 + 石色碎石 + 断续车辙；草路交界锯齿（草侵入 1–2 px，直线不超 4 px）；上左亮、下右暗，路面微凹
+ * - 田：垄顶亮、垄侧基、垄沟暗（沟底再压一点木暗）；作物四季不同高度
+ * - 石板：缝里青苔（春夏草暗 / 秋冬土暗），每块左上高光右下暗
+ * - 屋前土地：脚印、碎石、颗粒
+ * 光源左上。所有颜色来自 palette.ts；密度 ≥ 15% 非基色像素由单测保证。
  */
 import { Grid } from '@/pixel/painter';
 import type { Season } from '@/lib/season';
 import { ramp, SEASON_RAMPS, type Ramp } from '../palette';
-import { hash2, letters, TILE, tile, type Art } from './tile';
+import { hash2, TILE } from './tile';
+
+/* ------------------------------ 工具 ------------------------------ */
+type Rng = () => number;
+/** 同一格同一用途每次画出来一样 */
+function makeRng(x: number, y: number, salt: number): Rng {
+  let i = 0;
+  return () => hash2(x, y, salt * 1000 + i++);
+}
+const pick = <T,>(rnd: Rng, arr: T[]): T => arr[Math.floor(rnd() * arr.length)];
+const irange = (rnd: Rng, lo: number, hi: number) => lo + Math.floor(rnd() * (hi - lo + 1));
+
+/** 非基色像素数不够就补散点，直到达到 min（验收：≥ 15% ≈ 39 px） */
+function ensureDensity(g: Grid, base: string, min: number, rnd: Rng, colors: string[]) {
+  let count = g.data.filter((c) => c && c !== base).length;
+  let guard = 0;
+  while (count < min && guard++ < 400) {
+    const px = irange(rnd, 0, TILE - 1);
+    const py = irange(rnd, 0, TILE - 1);
+    if (g.get(px, py) === base) {
+      g.set(px, py, pick(rnd, colors));
+      count++;
+    }
+  }
+}
 
 /* ------------------------------ 草 ------------------------------ */
-// 四个变体：草茬位置不同；冬天变体是雪地（雪暗阶做小阴影、亮阶做反光）
-const GRASS_ART: Art[] = [
-  [
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBDBBBBB',
-    'BBBDBBBBBDLDBBBB',
-    'BBDLDBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBDBBBBBBBB',
-    'BBBBBBDLDBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBDBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-  ],
-  [
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBDBBB',
-    'BBBDBBBBBBBDLDBB',
-    'BBDLDBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBDBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-  ],
-  [
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-  ],
-  [
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBDBBBBB',
-    'BBBBBBBBBDLDBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-  ],
-];
+export type GrassVariant = 'normal' | 'dense' | 'sparse' | 'flowers';
+export const GRASS_VARIANTS: GrassVariant[] = ['normal', 'dense', 'sparse', 'flowers'];
 
-// 雪地变体：小阴影窝（D）与反光点（L）
-const SNOW_ART: Art[] = [
-  [
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBLBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBDDBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBLBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-  ],
-  [
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBLBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBDDBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-    'BBBBBBBBBBBBBBBB',
-  ],
-  GRASS_ART[2],
-  GRASS_ART[2],
-];
-
-export function grassTile(season: Season, variant: number): Grid {
-  const r = SEASON_RAMPS[season].grass;
-  const art = season === 'winter' ? SNOW_ART : GRASS_ART;
-  return tile(art[variant % art.length], letters(r));
+/** 一簇草茬：三种形，2–3 像素，暗阶为主，偶尔顶部亮阶 */
+function tuft(g: Grid, x: number, y: number, r: Ramp, rnd: Rng, allowLight: boolean) {
+  const shape = irange(rnd, 0, 2);
+  if (shape === 0) {
+    // L 形
+    g.set(x, y, r.dark);
+    g.set(x + 1, y, r.dark);
+    g.set(x, y - 1, allowLight && rnd() < 0.3 ? r.light : r.dark);
+  } else if (shape === 1) {
+    // 斜两点
+    g.set(x, y, r.dark);
+    g.set(x + 1, y - 1, r.dark);
+  } else {
+    // 三叶
+    g.set(x, y, r.dark);
+    g.set(x + 1, y, r.dark);
+    g.set(x + 2, y, r.dark);
+    g.set(x + 1, y - 1, allowLight && rnd() < 0.4 ? r.light : r.dark);
+  }
 }
 
-/** 按坐标挑变体：大部分是平草，约 40% 带草茬 */
+function grassBase(season: Season, variant: GrassVariant, x: number, y: number): Grid {
+  const r = SEASON_RAMPS[season].grass;
+  const g = new Grid(TILE, TILE).rect(0, 0, TILE, TILE, r.base);
+  const rnd = makeRng(x, y, 100 + GRASS_VARIANTS.indexOf(variant));
+
+  if (season === 'winter') {
+    // 雪地：小阴影窝、雪堆边、反光点；dense 变体露几根枯草
+    const drifts = variant === 'dense' ? 3 : variant === 'sparse' ? 1 : 2;
+    for (let k = 0; k < drifts; k++) {
+      const w = irange(rnd, 2, 4);
+      g.rect(irange(rnd, 0, TILE - w), irange(rnd, 0, TILE - 2), w, 1, r.dark);
+    }
+    const dots = variant === 'sparse' ? 3 : 5;
+    for (let k = 0; k < dots; k++) g.set(irange(rnd, 0, TILE - 1), irange(rnd, 0, TILE - 1), r.dark);
+    for (let k = 0; k < 4; k++) g.set(irange(rnd, 0, TILE - 1), irange(rnd, 0, TILE - 1), r.light);
+    if (variant === 'dense') {
+      const a = ramp('autumn');
+      for (let k = 0; k < 2; k++) {
+        const sx = irange(rnd, 1, TILE - 2);
+        const sy = irange(rnd, 3, TILE - 1);
+        g.set(sx, sy, a.dark);
+        g.set(sx, sy - 1, a.dark);
+        g.set(sx + (rnd() < 0.5 ? 1 : -1), sy - 2, a.base);
+      }
+    }
+    if (variant === 'flowers') {
+      // 雪里的小石子
+      const s = ramp('stone');
+      const sx = irange(rnd, 2, TILE - 4);
+      const sy = irange(rnd, 2, TILE - 3);
+      g.rect(sx, sy, 2, 1, s.base);
+      g.set(sx + 1, sy + 1, s.dark);
+    }
+    ensureDensity(g, r.base, 40, rnd, [r.dark, r.dark, r.light]);
+    return g;
+  }
+
+  // 暗阶密处：2×2 或 3×2
+  const blocks = variant === 'dense' ? 2 : variant === 'sparse' ? 1 : variant === 'flowers' ? 1 : 1;
+  for (let k = 0; k < blocks; k++) {
+    const w = rnd() < 0.5 ? 2 : 3;
+    g.rect(irange(rnd, 0, TILE - w), irange(rnd, 0, TILE - 2), w, 2, r.dark);
+  }
+  // 草茬簇：分布不均匀（先挑一个重心，簇往那边偏）
+  const tufts = variant === 'dense' ? 6 : variant === 'sparse' ? 4 : 5;
+  const cx = irange(rnd, 3, 12);
+  const cy = irange(rnd, 3, 12);
+  for (let k = 0; k < tufts; k++) {
+    const near = rnd() < 0.6;
+    const tx = near ? Math.max(0, Math.min(TILE - 3, cx + irange(rnd, -4, 4))) : irange(rnd, 0, TILE - 3);
+    const ty = near ? Math.max(1, Math.min(TILE - 1, cy + irange(rnd, -4, 4))) : irange(rnd, 1, TILE - 1);
+    tuft(g, tx, ty, r, rnd, variant !== 'dense');
+  }
+  // 散点
+  const specks = variant === 'dense' ? 10 : variant === 'sparse' ? 4 : 7;
+  for (let k = 0; k < specks; k++) g.set(irange(rnd, 0, TILE - 1), irange(rnd, 0, TILE - 1), r.dark);
+  if (variant === 'sparse') for (let k = 0; k < 3; k++) g.set(irange(rnd, 0, TILE - 1), irange(rnd, 0, TILE - 1), r.light);
+
+  if (variant === 'flowers') {
+    const p = ramp('plaster');
+    const s = ramp('stone');
+    const flowerColor = season === 'autumn' ? ramp('gold').light : p.light;
+    const flowerSide = season === 'autumn' ? ramp('gold').base : p.base;
+    for (let k = 0; k < 2; k++) {
+      const fx = irange(rnd, 1, TILE - 3);
+      const fy = irange(rnd, 1, TILE - 2);
+      g.set(fx, fy, flowerColor);
+      g.set(fx + 1, fy, flowerSide);
+      g.set(fx, fy + 1, r.dark);
+    }
+    const sx = irange(rnd, 1, TILE - 4);
+    const sy = irange(rnd, 1, TILE - 3);
+    g.rect(sx, sy, 2, 1, s.base);
+    g.set(sx + 1, sy + 1, s.dark);
+  }
+  ensureDensity(g, r.base, 40, rnd, [r.dark, r.dark, r.dark, r.light]);
+  return g;
+}
+
+export function grassTile(season: Season, variant: GrassVariant | number, x = 0, y = 0): Grid {
+  const v = typeof variant === 'number' ? GRASS_VARIANTS[variant % GRASS_VARIANTS.length] : variant;
+  return grassBase(season, v, x, y);
+}
+
+/** 按坐标挑变体：普通为主，暗块多 / 稀疏 / 小花各占一部分 */
 export function grassAt(season: Season, x: number, y: number): Grid {
   const h = hash2(x, y, 1);
-  const variant = h < 0.6 ? 2 : h < 0.75 ? 0 : h < 0.9 ? 1 : 3;
-  return grassTile(season, variant);
+  const v: GrassVariant = h < 0.5 ? 'normal' : h < 0.7 ? 'dense' : h < 0.88 ? 'sparse' : 'flowers';
+  return grassBase(season, v, x, y);
 }
 
-/* ------------------------------ 土路（自动拼接） ------------------------------ */
-export type Dir = 'n' | 's' | 'e' | 'w';
+/* ------------------------------ 路：锯齿轮廓 ------------------------------ */
 export interface Edges {
   n: boolean;
   s: boolean;
   e: boolean;
   w: boolean;
 }
+export interface Corners {
+  ne: boolean;
+  nw: boolean;
+  se: boolean;
+  sw: boolean;
+}
+const NO_CORNERS: Corners = { ne: false, nw: false, se: false, sw: false };
 
-/** 路面本体：土基阶 + 稀疏碎石（亮）与土痕（暗），按坐标撒 */
-function pathBody(r: Ramp, x: number, y: number): Grid {
-  const g = new Grid(TILE, TILE).rect(0, 0, TILE, TILE, r.base);
-  for (let k = 0; k < 3; k++) {
-    const px = Math.floor(hash2(x, y, 10 + k) * 14) + 1;
-    const py = Math.floor(hash2(x, y, 20 + k) * 14) + 1;
-    g.set(px, py, k === 0 ? r.dark : r.light);
-    if (k === 1) g.set(px + 1, py, r.light);
+/**
+ * 锯齿轮廓：沿边每个位置草侵入路的深度 0–2 px，按 2–4 px 一段，相邻段深度不同，
+ * 所以交界处任何一段直线都不超过 4 px。
+ */
+export function jaggedProfile(len: number, rnd: Rng, avoidFirst = -1): number[] {
+  const out: number[] = [];
+  let last = avoidFirst;
+  while (out.length < len) {
+    let d = irange(rnd, 0, 2);
+    if (d === last) d = (d + 1 + irange(rnd, 0, 1)) % 3;
+    const run = irange(rnd, 2, 4);
+    for (let k = 0; k < run && out.length < len; k++) out.push(d);
+    last = d;
   }
-  return g;
+  return out;
+}
+
+/** 路格的路 / 草掩码：true = 路 */
+/** 某格某侧的锯齿轮廓；首段深度避开左（上）邻格末段深度，跨格也不连成直线 */
+function edgeProfile(x: number, y: number, side: 'n' | 's' | 'w' | 'e'): number[] {
+  const salt = { n: 201, s: 202, w: 203, e: 204 }[side];
+  const gen = (px: number, py: number, avoid: number) => jaggedProfile(TILE, makeRng(px, py, salt), avoid);
+  const prevX = side === 'n' || side === 's' ? x - 1 : x;
+  const prevY = side === 'n' || side === 's' ? y : y - 1;
+  const prev = gen(prevX, prevY, -1);
+  return gen(x, y, prev[TILE - 1]);
+}
+
+function pathMask(edges: Edges, corners: Corners, rnd: Rng, x: number, y: number): boolean[][] {
+  const m: boolean[][] = Array.from({ length: TILE }, () => Array<boolean>(TILE).fill(true));
+  const n = edges.n ? edgeProfile(x, y, 'n') : null;
+  const s = edges.s ? edgeProfile(x, y, 's') : null;
+  const w = edges.w ? edgeProfile(x, y, 'w') : null;
+  const e = edges.e ? edgeProfile(x, y, 'e') : null;
+  for (let y = 0; y < TILE; y++) {
+    for (let x = 0; x < TILE; x++) {
+      let grass = false;
+      if (n && y < n[x]) grass = true;
+      if (s && y >= TILE - s[x]) grass = true;
+      if (w && x < w[y]) grass = true;
+      if (e && x >= TILE - e[y]) grass = true;
+      if (grass) m[y][x] = false;
+    }
+  }
+  // 外圆角：两边都是草的角再切一个 3 px 斜角，带一点随机
+  const cut = (cx: number, cy: number, dx: number, dy: number) => {
+    const r = irange(rnd, 3, 4);
+    for (let j = 0; j < r; j++) for (let i = 0; i < r - j; i++) m[cy + dy * j][cx + dx * i] = false;
+  };
+  if (edges.n && edges.w) cut(0, 0, 1, 1);
+  if (edges.n && edges.e) cut(TILE - 1, 0, -1, 1);
+  if (edges.s && edges.w) cut(0, TILE - 1, 1, -1);
+  if (edges.s && edges.e) cut(TILE - 1, TILE - 1, -1, -1);
+  // 内角：斜对角是草而两侧都是路时，角上补一小块草，让拐角圆润
+  const inner = (cx: number, cy: number, dx: number, dy: number) => {
+    const r = irange(rnd, 2, 3);
+    for (let j = 0; j < r; j++) for (let i = 0; i < r - j; i++) m[cy + dy * j][cx + dx * i] = false;
+  };
+  if (corners.nw && !edges.n && !edges.w) inner(0, 0, 1, 1);
+  if (corners.ne && !edges.n && !edges.e) inner(TILE - 1, 0, -1, 1);
+  if (corners.sw && !edges.s && !edges.w) inner(0, TILE - 1, 1, -1);
+  if (corners.se && !edges.s && !edges.e) inner(TILE - 1, TILE - 1, -1, -1);
+  return m;
 }
 
 /**
- * 路块：edges 标出哪一侧接的是草（要描边 + 切圆角）。
- * 描边用土暗阶 1 px；朝上 / 左的边里侧再加 1 px 亮阶（左上光源）。
+ * 路块。edges：哪一侧接草；corners：哪个斜对角是草（用于内角）。
+ * 草的部分透明（底下的草格透出来），交界处在草侧点几粒草暗阶。
  */
-export function pathTile(season: Season, edges: Edges, x = 0, y = 0): Grid {
+export function pathTile(season: Season, edges: Edges, x = 0, y = 0, corners: Corners = NO_CORNERS): Grid {
   const r = ramp('earth');
-  const g = pathBody(r, x, y);
-  const n = TILE - 1;
-  if (edges.n) {
-    g.hline(0, 0, TILE, r.dark);
-    g.hline(1, 1, TILE - 2, r.light);
-  }
-  if (edges.s) g.hline(0, n, TILE, r.dark);
-  if (edges.w) {
-    g.vline(0, 0, TILE, r.dark);
-    g.vline(1, 1, TILE - 2, r.light);
-  }
-  if (edges.e) g.vline(n, 0, TILE, r.dark);
-  // 外圆角：两边都接草的角切掉 2 px（透出草）
-  const corner = (cx: number, cy: number, dx: number, dy: number) => {
-    g.set(cx, cy, null);
-    g.set(cx + dx, cy, null);
-    g.set(cx, cy + dy, null);
-    g.set(cx + dx * 2, cy, r.dark);
-    g.set(cx, cy + dy * 2, r.dark);
-    g.set(cx + dx, cy + dy, r.dark);
+  const gr = SEASON_RAMPS[season].grass;
+  const st = ramp('stone');
+  const rnd = makeRng(x, y, 200);
+  const mask = pathMask(edges, corners, rnd, x, y);
+  const isPath = (px: number, py: number): boolean => {
+    if (px >= 0 && px < TILE && py >= 0 && py < TILE) return mask[py][px];
+    // 格外：接草的那一侧算草，其他方向算路
+    if (py < 0) return !edges.n && !(px < 0 && corners.nw) && !(px >= TILE && corners.ne);
+    if (py >= TILE) return !edges.s && !(px < 0 && corners.sw) && !(px >= TILE && corners.se);
+    if (px < 0) return !edges.w;
+    return !edges.e;
   };
-  if (edges.n && edges.w) corner(0, 0, 1, 1);
-  if (edges.n && edges.e) corner(n, 0, -1, 1);
-  if (edges.s && edges.w) corner(0, n, 1, -1);
-  if (edges.s && edges.e) corner(n, n, -1, -1);
-  void season;
+  const g = new Grid(TILE, TILE);
+  const interior: [number, number][] = [];
+  for (let py = 0; py < TILE; py++) {
+    for (let px = 0; px < TILE; px++) {
+      if (!mask[py][px]) {
+        // 草侧：交界处点草茬
+        if ((isPath(px + 1, py) || isPath(px - 1, py) || isPath(px, py + 1) || isPath(px, py - 1)) && rnd() < 0.35) g.set(px, py, gr.dark);
+        continue;
+      }
+      const grassN = !isPath(px, py - 1);
+      const grassW = !isPath(px - 1, py);
+      const grassS = !isPath(px, py + 1);
+      const grassE = !isPath(px + 1, py);
+      if (grassN || grassW) g.set(px, py, r.light);
+      else if (grassS || grassE) g.set(px, py, r.dark);
+      else {
+        g.set(px, py, r.base);
+        interior.push([px, py]);
+      }
+    }
+  }
+  // 车辙：沿路方向两条断续暗阶线，间距 6 px
+  const horizontal = edges.n || edges.s ? !(edges.e || edges.w) : edges.e || edges.w ? false : rnd() < 0.5;
+  const straight = (edges.n || edges.s) !== (edges.e || edges.w) || (!edges.n && !edges.s && !edges.e && !edges.w);
+  if (straight) {
+    const off = irange(rnd, 0, 4);
+    for (let k = 0; k < TILE; k++) {
+      if ((k + off) % 5 >= 3) continue;
+      for (const line of [5, 11]) {
+        const px = horizontal ? k : line;
+        const py = horizontal ? line : k;
+        if (mask[py][px] && g.get(px, py) === r.base) g.set(px, py, r.dark);
+      }
+    }
+  }
+  // 颗粒 10–14：暗为主，亮做碎石反光
+  const grains = irange(rnd, 10, 14);
+  for (let k = 0; k < grains && interior.length; k++) {
+    const [px, py] = pick(rnd, interior);
+    if (g.get(px, py) === r.base) g.set(px, py, rnd() < 0.6 ? r.dark : r.light);
+  }
+  // 碎石 1–2：石色 2×1 + 右下一点石暗
+  const stones = irange(rnd, 1, 2);
+  for (let k = 0; k < stones && interior.length; k++) {
+    const [px, py] = pick(rnd, interior);
+    if (px + 1 < TILE && mask[py][px + 1] && py + 1 < TILE) {
+      g.set(px, py, st.base);
+      g.set(px + 1, py, st.base);
+      if (mask[py + 1][px + 1]) g.set(px + 1, py + 1, st.dark);
+    }
+  }
+  // 密度兜底：路面像素里非基色 ≥ 15%
+  const pathPixels = g.data.filter((c) => c).length;
+  ensureDensity(g, r.base, Math.ceil(pathPixels * 0.16), rnd, [r.dark, r.dark, r.light]);
   return g;
 }
 
-/** 内角：路的 L 形拐角处补一个暗阶像素，让转角不生硬 */
-export function pathInnerCorner(g: Grid, ne: boolean, nw: boolean, se: boolean, sw: boolean): Grid {
-  const d = ramp('earth').dark;
-  if (nw) g.set(0, 0, d);
-  if (ne) g.set(TILE - 1, 0, d);
-  if (sw) g.set(0, TILE - 1, d);
-  if (se) g.set(TILE - 1, TILE - 1, d);
-  return g;
-}
-
-/* ------------------------------ 屋前土地（无描边） ------------------------------ */
+/* ------------------------------ 屋前土地 ------------------------------ */
 export function dirtTile(x = 0, y = 0): Grid {
   const r = ramp('earth');
-  const g = pathBody(r, x, y);
-  // 再撒两点暗阶，比路更「土」
-  g.set(Math.floor(hash2(x, y, 31) * 15), Math.floor(hash2(x, y, 32) * 15), r.dark);
+  const st = ramp('stone');
+  const rnd = makeRng(x, y, 300);
+  const g = new Grid(TILE, TILE).rect(0, 0, TILE, TILE, r.base);
+  // 脚印：2×3 暗阶，两只一组错开
+  const fx = irange(rnd, 1, 9);
+  const fy = irange(rnd, 1, 9);
+  g.rect(fx, fy, 2, 3, r.dark);
+  g.rect(fx + 3, fy + 2, 2, 3, r.dark);
+  // 碎石
+  const sx = irange(rnd, 1, TILE - 4);
+  const sy = irange(rnd, 1, TILE - 3);
+  g.rect(sx, sy, 2, 1, st.base);
+  g.set(sx + 1, sy + 1, st.dark);
+  // 颗粒
+  for (let k = 0; k < 9; k++) g.set(irange(rnd, 0, TILE - 1), irange(rnd, 0, TILE - 1), rnd() < 0.65 ? r.dark : r.light);
+  ensureDensity(g, r.base, 40, rnd, [r.dark, r.dark, r.light]);
   return g;
 }
 
 /* ------------------------------ 广场石板 ------------------------------ */
 /**
- * 石板：8×8 一块，横向错缝（像砌砖）。缝用石暗阶，块左上一个亮阶反光点，偶有一块换成基阶偏暗做旧。
+ * 石板：8×8 一块横向错缝；缝里点青苔（春夏草暗 / 秋冬土暗）；每块左上 1 px 亮、右下 1 px 暗；偶有缺角板。
  */
-export function stoneTile(x = 0, y = 0): Grid {
+export function stoneTile(season: Season, x = 0, y = 0): Grid {
   const r = ramp('stone');
+  const moss = season === 'spring' || season === 'summer' ? ramp('grass').dark : ramp('earth').dark;
+  const rnd = makeRng(x, y, 400);
   const g = new Grid(TILE, TILE).rect(0, 0, TILE, TILE, r.base);
   const shift = y % 2 === 0 ? 0 : 4;
-  // 横缝
-  g.hline(0, 7, TILE, r.dark);
-  g.hline(0, 15, TILE, r.dark);
-  // 竖缝（上下两排错开）
-  for (const cx of [shift + 7, shift + 15]) if (cx < TILE) g.vline(cx, 0, 7, r.dark);
-  for (const cx of [(shift + 3) % 8, ((shift + 3) % 8) + 8]) if (cx < TILE) g.vline(cx, 8, 7, r.dark);
-  // 反光点：每块左上
-  g.set(1, 1, r.light);
-  g.set(shift + 9 < TILE ? shift + 9 : 1, 1, r.light);
-  g.set(((shift + 3) % 8) + 2, 9, r.light);
-  // 做旧：随机一块加一小片暗阶
-  if (hash2(x, y, 40) < 0.3) g.rect(3, 10, 2, 1, r.dark);
+  // 板块起点（x 方向），上排与下排错开
+  const rows: { y0: number; xs: number[] }[] = [
+    { y0: 0, xs: [shift - 8, shift, shift + 8] },
+    { y0: 8, xs: [((shift + 4) % 8) - 8, (shift + 4) % 8, ((shift + 4) % 8) + 8] },
+  ];
+  for (const row of rows) {
+    g.hline(0, row.y0 + 7, TILE, r.dark); // 横缝
+    for (const x0 of row.xs) {
+      const right = x0 + 7;
+      if (right >= 0 && right < TILE) g.vline(right, row.y0, 7, r.dark); // 竖缝
+      // 高光 / 暗角
+      if (x0 >= 0 && x0 < TILE) {
+        g.set(x0, row.y0, r.light);
+        g.set(x0 + 1, row.y0, r.light);
+        g.set(x0, row.y0 + 1, r.light);
+      }
+      if (right - 1 >= 0 && right - 1 < TILE) g.set(right - 1, row.y0 + 6, r.dark);
+      // 缺角板：偶尔一块右下角缺一小块
+      if (rnd() < 0.18 && right - 2 >= 0 && right < TILE) g.rect(right - 2, row.y0 + 5, 2, 2, r.dark);
+    }
+  }
+  // 青苔：缝里 3–5 点
+  const mossN = irange(rnd, 3, 5);
+  for (let k = 0; k < mossN; k++) {
+    const px = irange(rnd, 0, TILE - 1);
+    const py = irange(rnd, 0, TILE - 1);
+    if (g.get(px, py) === r.dark) g.set(px, py, moss);
+  }
   return g;
 }
 
 /* ------------------------------ 田 ------------------------------ */
 /**
- * 田：垄横向，每 4 行一道垄沟（土暗），垄面土基，作物按季：
- * 春 嫩苗（2 px 竖点）· 夏 高株（3 px + 亮顶）· 秋 麦穗（金 3 px + 亮头）· 冬 雪盖垄（雪基 / 沟雪暗）
+ * 田：垄横向，每 4 行一垄：顶 1 行亮、侧 2 行基、沟 1 行暗（沟里再压 2–3 点木暗）。
+ * 作物：春 嫩苗 2 px · 夏 叶簇 3 宽 × 3–4 高 · 秋 麦：杆 + 金穗 · 冬 雪盖垄、沟里露土暗
  */
 export function fieldTile(season: Season, x = 0, y = 0): Grid {
   const e = ramp('earth');
   const c = SEASON_RAMPS[season].crop;
+  const wood = ramp('wood');
+  const rnd = makeRng(x, y, 500);
   const g = new Grid(TILE, TILE);
   if (season === 'winter') {
     g.rect(0, 0, TILE, TILE, c.base);
-    for (let row = 3; row < TILE; row += 4) g.hline(0, row, TILE, c.dark);
-    for (let row = 0; row < TILE; row += 4) g.hline(0, row, TILE, c.light);
+    for (let row = 0; row < TILE; row += 4) {
+      g.hline(0, row, TILE, c.light); // 垄顶反光
+      g.hline(0, row + 3, TILE, c.dark); // 沟
+      for (let k = 0; k < 3; k++) g.set(irange(rnd, 0, TILE - 1), row + 3, e.dark); // 沟里露土
+      g.set(irange(rnd, 0, TILE - 1), row + 1, c.dark);
+    }
     return g;
   }
   g.rect(0, 0, TILE, TILE, e.base);
-  for (let row = 3; row < TILE; row += 4) {
-    g.hline(0, row, TILE, e.dark);
-    g.hline(0, row - 3, TILE, e.light); // 垄顶受光
+  for (let row = 0; row < TILE; row += 4) {
+    g.hline(0, row, TILE, e.light);
+    g.hline(0, row + 3, TILE, e.dark);
+    for (let k = 0; k < 3; k++) g.set(irange(rnd, 0, TILE - 1), row + 3, wood.dark);
+    g.set(irange(rnd, 0, TILE - 1), row + 2, e.dark);
   }
-  // 作物：每垄 4 株，位置错开
   const off = (x + y) % 2 === 0 ? 1 : 3;
   for (let row = 0; row < TILE; row += 4) {
     for (let k = 0; k < 4; k++) {
-      const px = off + k * 4;
-      if (px >= TILE) continue;
+      const px = off + k * 4 + (rnd() < 0.3 ? 1 : 0);
+      if (px >= TILE - 1) continue;
       if (season === 'spring') {
-        g.set(px, row + 1, c.base);
-        g.set(px, row + 2, c.dark);
+        g.set(px, row + 1, c.light);
+        g.set(px, row + 2, c.base);
       } else if (season === 'summer') {
-        g.set(px, row, c.light);
-        g.set(px, row + 1, c.base);
-        g.set(px, row + 2, c.dark);
-        g.set(px + 1, row + 1, c.dark);
+        // 叶簇：3 宽，3–4 高，顶亮中基底暗
+        const tall = rnd() < 0.5;
+        const top = tall ? row - 1 : row;
+        if (top >= 0) g.set(px, top, c.light);
+        g.set(px, top + 1, c.base);
+        g.set(px - 1, top + 1, c.base);
+        g.set(px + 1, top + 1, c.light);
+        g.set(px - 1, top + 2, c.dark);
+        g.set(px, top + 2, c.base);
+        g.set(px + 1, top + 2, c.dark);
+        if (top + 3 <= row + 2) g.set(px, top + 3, c.dark);
       } else {
-        g.set(px, row, c.light);
-        g.set(px + 1, row, c.light);
-        g.set(px, row + 1, c.base);
+        // 麦：秋草暗做杆，金穗
         g.set(px, row + 2, c.dark);
+        g.set(px, row + 1, c.dark);
+        g.set(px, row, c.base);
+        g.set(px + 1, row, c.light);
+        if (row - 1 >= 0) g.set(px, row - 1, c.light);
       }
     }
   }
@@ -290,58 +439,72 @@ export interface SheetItem {
 
 export function groundSheet(season: Season): SheetItem[] {
   const items: SheetItem[] = [];
-  for (let v = 0; v < 4; v++) items.push({ name: `草 ${v + 1}`, grid: grassTile(season, v) });
+  const names: Record<GrassVariant, string> = { normal: '草 普通', dense: '草 暗块多', sparse: '草 稀疏', flowers: season === 'winter' ? '雪 小石' : '草 小花' };
+  GRASS_VARIANTS.forEach((v) => items.push({ name: names[v], grid: grassTile(season, v, 2, 3) }));
   const E = (n: boolean, s: boolean, e: boolean, w: boolean): Edges => ({ n, s, e, w });
-  items.push({ name: '路 中', grid: pathTile(season, E(false, false, false, false), 3, 3) });
-  items.push({ name: '路 上边', grid: pathTile(season, E(true, false, false, false)) });
-  items.push({ name: '路 下边', grid: pathTile(season, E(false, true, false, false)) });
-  items.push({ name: '路 左边', grid: pathTile(season, E(false, false, false, true)) });
-  items.push({ name: '路 右边', grid: pathTile(season, E(false, false, true, false)) });
-  items.push({ name: '路 左上角', grid: pathTile(season, E(true, false, false, true)) });
-  items.push({ name: '路 右上角', grid: pathTile(season, E(true, false, true, false)) });
-  items.push({ name: '路 左下角', grid: pathTile(season, E(false, true, false, true)) });
-  items.push({ name: '路 右下角', grid: pathTile(season, E(false, true, true, false)) });
-  items.push({ name: '路 横带', grid: pathTile(season, E(true, true, false, false)) });
-  items.push({ name: '路 竖带', grid: pathTile(season, E(false, false, true, true)) });
-  items.push({ name: '路 尽头', grid: pathTile(season, E(true, false, true, true)) });
+  const P = (name: string, edges: Edges, corners?: Corners, salt = 0) => items.push({ name, grid: pathTile(season, edges, 3 + salt, 3, corners) });
+  P('路 中', E(false, false, false, false));
+  P('路 上边', E(true, false, false, false));
+  P('路 下边', E(false, true, false, false));
+  P('路 左边', E(false, false, false, true));
+  P('路 右边', E(false, false, true, false));
+  P('路 左上角', E(true, false, false, true));
+  P('路 右上角', E(true, false, true, false));
+  P('路 左下角', E(false, true, false, true));
+  P('路 右下角', E(false, true, true, false));
+  P('路 横带', E(true, true, false, false));
+  P('路 竖带', E(false, false, true, true));
+  P('路 尽头', E(true, false, true, true));
+  P('路 内角', E(false, false, false, false), { ne: false, nw: true, se: true, sw: false }, 1);
   items.push({ name: '土地', grid: dirtTile(1, 2) });
-  items.push({ name: '石板 A', grid: stoneTile(0, 0) });
-  items.push({ name: '石板 B', grid: stoneTile(0, 1) });
+  items.push({ name: '石板 A', grid: stoneTile(season, 0, 0) });
+  items.push({ name: '石板 B', grid: stoneTile(season, 0, 1) });
   items.push({ name: '田 A', grid: fieldTile(season, 0, 0) });
   items.push({ name: '田 B', grid: fieldTile(season, 1, 0) });
   return items;
 }
 
-/**
- * 拼合样例：12×8 格，草地上一条横路一条竖路交叉、右上一片 3×2 石板、左下一片 3×2 田、右下一块屋前土地。
- */
-export function groundDemo(season: Season): Grid {
+type Kind = 'g' | 'p' | 's' | 'f' | 'd';
+/** 样例布局 12×8：横路 + 竖路（下端尽头）+ 一条短支路，右上石板，左下田，右下屋前土地 */
+export function demoLayout(): Kind[][] {
   const W = 12;
   const H = 8;
-  type Kind = 'g' | 'p' | 's' | 'f' | 'd';
   const map: Kind[][] = Array.from({ length: H }, () => Array<Kind>(W).fill('g'));
   for (let x = 0; x < W; x++) map[3][x] = 'p';
-  for (let y = 0; y < H; y++) map[y][5] = 'p';
-  for (let y = 0; y < 2; y++) for (let x = 8; x < 11; x++) map[y][x] = 's';
+  for (let y = 0; y < 6; y++) map[y][5] = 'p';
+  map[1][7] = 'p';
+  map[2][7] = 'p';
+  for (let y = 0; y < 2; y++) for (let x = 9; x < 12; x++) map[y][x] = 's';
   for (let y = 5; y < 7; y++) for (let x = 1; x < 4; x++) map[y][x] = 'f';
   for (let y = 5; y < 7; y++) for (let x = 8; x < 10; x++) map[y][x] = 'd';
-  const at = (x: number, y: number): Kind => (y < 0 || y >= H || x < 0 || x >= W ? 'p' : map[y][x]);
+  return map;
+}
+
+/** 按布局把地面拼成一张图（场景地面层也走这条路） */
+export function composeGround(season: Season, map: Kind[][]): Grid {
+  const H = map.length;
+  const W = map[0].length;
+  const at = (x: number, y: number): Kind => (y < 0 || y >= H || x < 0 || x >= W ? 'g' : map[y][x]);
+  const walkable = (k: Kind) => k === 'p' || k === 's' || k === 'd';
   const g = new Grid(W * TILE, H * TILE);
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
-      g.compose(grassAt(season, x, y), x * TILE, y * TILE);
       const k = map[y][x];
+      if (k !== 'f') g.compose(grassAt(season, x, y), x * TILE, y * TILE);
       let t: Grid | null = null;
       if (k === 'p') {
-        const isPath = (kk: Kind) => kk === 'p';
-        const edges: Edges = { n: !isPath(at(x, y - 1)), s: !isPath(at(x, y + 1)), e: !isPath(at(x + 1, y)), w: !isPath(at(x - 1, y)) };
-        t = pathTile(season, edges, x, y);
-        pathInnerCorner(t, !edges.n && !edges.e && !isPath(at(x + 1, y - 1)), !edges.n && !edges.w && !isPath(at(x - 1, y - 1)), !edges.s && !edges.e && !isPath(at(x + 1, y + 1)), !edges.s && !edges.w && !isPath(at(x - 1, y + 1)));
-      } else if (k === 's') t = stoneTile(x, y);
+        const edges: Edges = { n: !walkable(at(x, y - 1)), s: !walkable(at(x, y + 1)), e: !walkable(at(x + 1, y)), w: !walkable(at(x - 1, y)) };
+        const corners: Corners = { ne: !walkable(at(x + 1, y - 1)), nw: !walkable(at(x - 1, y - 1)), se: !walkable(at(x + 1, y + 1)), sw: !walkable(at(x - 1, y + 1)) };
+        t = pathTile(season, edges, x, y, corners);
+      } else if (k === 's') t = stoneTile(season, x, y);
       else if (k === 'f') t = fieldTile(season, x, y);
       else if (k === 'd') t = dirtTile(x, y);
       if (t) g.compose(t, x * TILE, y * TILE);
     }
   }
   return g;
+}
+
+export function groundDemo(season: Season): Grid {
+  return composeGround(season, demoLayout());
 }

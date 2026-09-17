@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Grid } from '@/pixel/painter';
 import { ALL_COLORS, COLOR_SET, FAMILIES } from './palette';
-import { groundDemo, groundSheet } from './sprites/ground';
+import { demoLayout, groundDemo, groundSheet, jaggedProfile } from './sprites/ground';
+import { hash2, TILE } from './sprites/tile';
 
 function colorsOf(g: Grid): Set<string> {
   const s = new Set<string>();
@@ -41,4 +42,68 @@ describe('地面图块只用调色板颜色', () => {
       for (const g of grids) for (const c of colorsOf(g)) expect(COLOR_SET.has(c)).toBe(true);
     });
   }
+});
+
+describe('地面图块密度与交界', () => {
+  const seasons = ['spring', 'summer', 'autumn', 'winter'] as const;
+  it('每块图块非基色像素 ≥ 15%（按最多的那种颜色算基色）', () => {
+    for (const season of seasons) {
+      for (const it of groundSheet(season)) {
+        const counts = new Map<string, number>();
+        let total = 0;
+        for (const c of it.grid.data) {
+          if (!c) continue;
+          total++;
+          counts.set(c, (counts.get(c) ?? 0) + 1);
+        }
+        const base = Math.max(...counts.values());
+        const ratio = 1 - base / total;
+        expect(ratio, `${season} ${it.name} 非基色占比 ${(ratio * 100).toFixed(0)}%`).toBeGreaterThanOrEqual(0.15);
+      }
+    }
+  });
+  it('锯齿轮廓：同一深度连续不超过 4 px，且不是一条直线', () => {
+    let i = 0;
+    const rnd = () => hash2(7, 9, 900 + i++);
+    for (let k = 0; k < 20; k++) {
+      const p = jaggedProfile(TILE, rnd);
+      expect(p).toHaveLength(TILE);
+      let run = 1;
+      for (let x = 1; x < TILE; x++) {
+        run = p[x] === p[x - 1] ? run + 1 : 1;
+        expect(run).toBeLessThanOrEqual(4);
+      }
+      expect(new Set(p).size).toBeGreaterThan(1);
+    }
+  });
+  it('拼合样例里草与路的交界没有超过 4 px 的直线', () => {
+    // 逐行扫：草→路的水平分界如果在同一 y 上连续超过 4 列相同，就算直线
+    const earth = new Set(['#9a7048', '#c4965e', '#e1bd85', '#8a8ea0', '#5f6076', '#b8bcc8']);
+    for (const season of seasons) {
+      const g = groundDemo(season);
+      const isEarth = (x: number, y: number) => {
+        const c = g.get(x, y);
+        return Boolean(c && earth.has(c));
+      };
+      // 竖直方向的分界（路的上下边）：对每一列找第一次进入路的 y；相邻列同 y 连续 >4 视为直线
+      let straight = 0;
+      const layout = demoLayout();
+      for (let x0 = 0; x0 < g.w; x0 += TILE) {
+        // 只看上方是草的横路上边（竖路、石板列跳过）
+        if (layout[2][x0 / TILE] !== 'g') continue;
+        const ys: number[] = [];
+        for (let x = x0; x < x0 + TILE; x++) {
+          let y = 3 * TILE - 4;
+          while (y < 3 * TILE + 6 && !isEarth(x, y)) y++;
+          ys.push(y);
+        }
+        let run = 1;
+        for (let k = 1; k < ys.length; k++) {
+          run = ys[k] === ys[k - 1] ? run + 1 : 1;
+          if (run > 4) straight++;
+        }
+      }
+      expect(straight, `${season} 横路上边有直线段`).toBe(0);
+    }
+  });
 });
