@@ -17,6 +17,12 @@ export interface Settings {
   disabledHolidays: string[];
   /** 首次使用日期 */
   firstUseDate?: string;
+  /** AI 功能总开关 */
+  aiEnabled: boolean;
+  /** AI 模型 */
+  aiModel: string;
+  /** 已看过占卜屋的自我介绍 */
+  fortuneIntroSeen?: boolean;
   /** 最近一次导出备份时间 */
   lastExportAt?: number;
   /** 上次衰减结算的日期 */
@@ -30,6 +36,8 @@ export const DEFAULT_SETTINGS: Settings = {
   soundEnabled: true,
   benmingnianReminder: true,
   disabledHolidays: [],
+  aiEnabled: false,
+  aiModel: 'claude-sonnet-5',
 };
 
 const KEY = 'app';

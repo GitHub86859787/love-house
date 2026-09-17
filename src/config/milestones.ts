@@ -19,7 +19,7 @@ export const MILESTONES: MilestoneConfig[] = [
   {
     hearts: 2,
     title: '初识',
-    description: 'TA 开始把你当作熟人了。是时候记住 TA 的生日了。',
+    description: 'TA 开始把你当作熟人了。是时候记住 TA 的生日了。星婆婆说，她现在可以帮你看看你们俩。',
     unlocks: [{ title: '知道 TA 的生日', description: '在 TA 的资料里填上生日', check: 'hasBirthday' }],
   },
   {

@@ -6,6 +6,7 @@ import { PersonFormPage } from '@/pages/PersonFormPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { CollectionPage } from '@/pages/CollectionPage';
 import { RecordPage } from '@/pages/RecordPage';
+import { FortunePage } from '@/pages/FortunePage';
 import { TooltipProvider } from '@/ui/Tooltip';
 import { MilestoneWatcher } from '@/features/milestones/MilestoneWatcher';
 import { AchievementWatcher } from '@/features/collection/AchievementWatcher';
@@ -20,6 +21,7 @@ const router = createHashRouter([
       { path: '/person/:id', element: <PersonDetailPage /> },
       { path: '/person/:id/edit', element: <PersonFormPage /> },
       { path: '/record', element: <RecordPage /> },
+      { path: '/fortune', element: <FortunePage /> },
       { path: '/collection', element: <CollectionPage /> },
       { path: '/settings', element: <SettingsPage /> },
     ],

@@ -5,7 +5,7 @@ import { Avatar } from '@/pixel/avatar/Avatar';
 import { HeartBar, heartsOf } from '@/ui/HeartBar';
 import { Panel } from '@/ui/Panel';
 import { formatRelative } from '@/lib/date';
-import { isGhost } from './VillageScene';
+import { isStale } from '@/features/scoring/decay';
 import { useSettings } from '@/db/settings';
 import { SCORING } from '@/config/scoring';
 import styles from './PersonCard.module.css';
@@ -13,7 +13,7 @@ import styles from './PersonCard.module.css';
 export function PersonCard({ person }: { person: Person }) {
   const nav = useNavigate();
   const settings = useSettings();
-  const ghost = isGhost(person, settings);
+  const ghost = isStale(person, settings);
   return (
     <Panel tight golden={heartsOf(person.affection) >= SCORING.maxHearts} className={styles.card} onClick={() => nav(`/person/${person.id}`)}>
       <div className={`${styles.avatarBox} px-corner-sm`}>

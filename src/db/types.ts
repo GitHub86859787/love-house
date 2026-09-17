@@ -45,6 +45,8 @@ export interface Note {
   id: string;
   text: string;
   createdAt: number;
+  /** 已被 AI 整理过 */
+  aiProcessedAt?: number;
 }
 
 /** 对方自己说的标签，如 MBTI / 血型 / 上升星座 */

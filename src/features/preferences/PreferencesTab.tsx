@@ -8,6 +8,7 @@ import { Chips } from '@/ui/Field';
 import { PreferenceChip } from './PreferenceChip';
 import { PreferenceEditor } from './PreferenceEditor';
 import { TierIcon } from '@/ui/TierIcon';
+import { GuessGroup } from './GuessGroup';
 
 export function PreferencesTab({ person }: { person: Person }) {
   const [editing, setEditing] = useState<Preference | null>(null);
@@ -15,7 +16,6 @@ export function PreferencesTab({ person }: { person: Person }) {
   const [defaultTier, setDefaultTier] = useState<PreferenceTier>('like');
 
   const confirmed = person.preferences.filter((p) => p.source !== 'fortune');
-  const guesses = person.preferences.filter((p) => p.source === 'fortune');
 
   const save = async (pref: Preference) => {
     const exists = person.preferences.some((p) => p.id === pref.id);
@@ -75,12 +75,7 @@ export function PreferencesTab({ person }: { person: Person }) {
         );
       })}
 
-      {guesses.length > 0 && (
-        <Inset style={{ borderStyle: 'dashed' }}>
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>🔮 占卜师的猜测 · {guesses.length}</div>
-          <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>确认与标记功能将在占卜师阶段开放。</p>
-        </Inset>
-      )}
+      <GuessGroup person={person} />
 
       <Button variant="primary" block iconName="plus" onClick={() => openNew('like')}>
         添加喜好

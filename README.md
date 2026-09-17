@@ -27,8 +27,13 @@ src/
   db/         Dexie 表结构与类型、人物 CRUD
   pixel/      像素画引擎、精灵（心 / 房子 / 图标）、拼装头像
   ui/         木框面板、按钮、心条、弹窗、表单控件
-  features/   村庄场景、人物卡、头像编辑器
-  pages/      村口 / 人物详情 / 编辑 / 图鉴 / 设置
+  features/   村庄场景、人物卡、头像编辑器、任务板、里程碑、图鉴、AI、占卜
+  features/village/  分区映射层（关系类型 → 区域）与场景数据模型，场景组件只消费它
+  ai/         Anthropic API 客户端（Key 存 localStorage，浏览器直连）、笔记提取、人物摘要
+  fortune/    占卜师：本地排盘（星座 / 生肖 / 灵数 / 八字 / 五行）、解读与合盘的 API 调用
+  pages/      村口 / 人物详情 / 编辑 / 记一笔 / 图鉴 / 占卜屋 / 设置
 ```
+
+AI 与占卜的提示词在 `src/config/ai-prompts.ts` 与 `src/config/fortune-prompt.ts`；改了占卜提示词请把 `FORTUNE_PROMPT_VERSION` +1，缓存会自动失效。
 
 字体：缝合像素字体 Fusion Pixel 12px（OFL-1.1），文件在 `src/assets/fonts/`。

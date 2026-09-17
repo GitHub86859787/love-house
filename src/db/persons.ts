@@ -33,6 +33,11 @@ export async function deletePerson(id: string): Promise<void> {
   });
 }
 
+/** 「我」的档案（全库唯一） */
+export async function getMe(): Promise<Person | undefined> {
+  return db.persons.filter((p) => Boolean(p.isMe)).first();
+}
+
 /** 按心数（点数）降序，心多的靠村口 */
 export function sortByAffection(list: Person[]): Person[] {
   return [...list].sort((a, b) => b.affection - a.affection || a.createdAt - b.createdAt);

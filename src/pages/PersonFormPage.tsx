@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/db';
-import type { AvatarConfig, Birth } from '@/db/types';
+import type { AvatarConfig, Birth, SelfTag } from '@/db/types';
+import { SHICHEN_OPTIONS } from '@/fortune/chart';
 import { createPerson, deletePerson, updatePerson } from '@/db/persons';
 import { addInteraction } from '@/db/interactions';
 import { useSettings } from '@/db/settings';
@@ -26,6 +27,10 @@ interface FormState {
   bDay: string;
   bYear: string;
   isLunar: boolean;
+  /** 时辰：'' 未知，'exact' 具体时间，否则地支 */
+  shichen: string;
+  exactTime: string;
+  selfTags: SelfTag[];
   tags: string[];
   taboos: string[];
   avatar: AvatarConfig;
@@ -42,6 +47,9 @@ const EMPTY: FormState = {
   bDay: '',
   bYear: '',
   isLunar: false,
+  shichen: '',
+  exactTime: '',
+  selfTags: [],
   tags: [],
   taboos: [],
   avatar: DEFAULT_AVATAR,
@@ -51,10 +59,12 @@ const EMPTY: FormState = {
 
 export function PersonFormPage() {
   const { id } = useParams();
+  const [params] = useSearchParams();
   const nav = useNavigate();
   const toast = useToast();
   const settings = useSettings();
   const editing = Boolean(id);
+  const creatingMe = !editing && params.get('me') === '1';
   const existing = useLiveQuery(() => (id ? db.persons.get(id) : undefined), [id]);
   const [form, setForm] = useState<FormState>(() => ({ ...EMPTY, avatar: randomAvatar('friend') }));
   const [loaded, setLoaded] = useState(!editing);
@@ -72,6 +82,9 @@ export function PersonFormPage() {
       bDay: existing.birth ? String(existing.birth.day) : '',
       bYear: existing.birth?.year ? String(existing.birth.year) : '',
       isLunar: existing.birth?.isLunar ?? false,
+      shichen: existing.birth?.hour == null ? '' : existing.birth.minute != null ? 'exact' : SHICHEN_OPTIONS.find((o) => o.hour === existing.birth!.hour)?.zhi ?? 'exact',
+      exactTime: existing.birth?.hour == null ? '' : `${String(existing.birth.hour).padStart(2, '0')}:${String(existing.birth.minute ?? 0).padStart(2, '0')}`,
+      selfTags: existing.selfTags ?? [],
       tags: existing.tags,
       taboos: existing.taboos,
       avatar: existing.avatar,
@@ -90,9 +103,15 @@ export function PersonFormPage() {
     if (!(month >= 1 && month <= 12 && day >= 1 && day <= 31)) return 'invalid';
     const year = form.bYear ? Number(form.bYear) : undefined;
     if (year !== undefined && !(year >= 1900 && year <= 2100)) return 'invalid';
-    // 保留已有的时辰字段（阶段 5 才有输入界面）
-    const keep = existing?.birth ? { hour: existing.birth.hour, minute: existing.birth.minute } : {};
-    return { month, day, ...(year ? { year } : {}), ...(form.isLunar ? { isLunar: true } : {}), ...keep };
+    let time: { hour?: number; minute?: number } = {};
+    if (form.shichen === 'exact' && form.exactTime) {
+      const [h, m] = form.exactTime.split(':').map(Number);
+      if (h >= 0 && h <= 23) time = { hour: h, minute: Number.isFinite(m) ? m : 0 };
+    } else if (form.shichen) {
+      const opt = SHICHEN_OPTIONS.find((o) => o.zhi === form.shichen);
+      if (opt) time = { hour: opt.hour };
+    }
+    return { month, day, ...(year ? { year } : {}), ...(form.isLunar ? { isLunar: true } : {}), ...time };
   };
 
   const submit = async () => {
@@ -122,6 +141,7 @@ export function PersonFormPage() {
       avatar: form.avatar,
       staleDaysOverride: grace,
       staleReminderMuted: form.staleMuted || undefined,
+      selfTags: form.selfTags,
     };
     if (editing && id && existing) {
       const relationChanged = existing.relation !== form.relation;
@@ -139,8 +159,15 @@ export function PersonFormPage() {
       }
       nav(`/person/${id}`, { replace: true });
     } else {
-      const p = await createPerson({ ...data, selfTags: [] });
-      toast(`${p.name} 搬进了村里！`);
+      if (creatingMe) {
+        const already = await db.persons.filter((x) => Boolean(x.isMe)).first();
+        if (already) {
+          nav(`/person/${already.id}/edit`, { replace: true });
+          return;
+        }
+      }
+      const p = await createPerson({ ...data, relation: creatingMe ? 'other' : data.relation, isMe: creatingMe || undefined });
+      toast(creatingMe ? '我的档案建好了' : `${p.name} 搬进了村里！`);
       nav(`/person/${p.id}`, { replace: true });
     }
   };
@@ -154,10 +181,11 @@ export function PersonFormPage() {
   }
 
   const defaultGrace = settings.graceDays[form.relation];
+  const isMe = creatingMe || Boolean(existing?.isMe);
 
   return (
     <Page>
-      <PageHeader title={editing ? '编辑村民' : '认识新村民'} left={<Button variant="ghost" iconName="back" aria-label="返回" onClick={() => nav(-1)} />} />
+      <PageHeader title={isMe ? '我的档案' : editing ? '编辑村民' : '认识新村民'} left={<Button variant="ghost" iconName="back" aria-label="返回" onClick={() => nav(-1)} />} />
 
       <Panel title="头像">
         <AvatarEditor value={form.avatar} onChange={(a) => set('avatar', a)} relation={form.relation} />
@@ -174,6 +202,7 @@ export function PersonFormPage() {
             </Field>
           </Row>
           <Row>
+            {!isMe && (
             <Field label="关系">
               <Select
                 value={form.relation}
@@ -190,9 +219,12 @@ export function PersonFormPage() {
                 ))}
               </Select>
             </Field>
+            )}
+            {!isMe && (
             <Field label="认识日期">
               <Input type="date" value={form.metOn} onChange={(e) => set('metOn', e.target.value)} />
             </Field>
+            )}
           </Row>
           <Field label="生日（年份可不填）">
             <Row>
@@ -203,9 +235,27 @@ export function PersonFormPage() {
           </Field>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--fs-sm)' }}>
             <input type="checkbox" checked={form.isLunar} onChange={(e) => set('isLunar', e.target.checked)} style={{ width: 20, height: 20 }} />
-            TA 过农历生日（提醒和生日加成按农历算）
+            {isMe ? '我过农历生日' : 'TA 过农历生日（提醒和生日加成按农历算）'}
           </label>
+          <Field label="出生时辰（可选，占卜师排四柱用）">
+            <Row>
+              <Select value={form.shichen} onChange={(e) => set('shichen', e.target.value)}>
+                <option value="">不知道</option>
+                {SHICHEN_OPTIONS.map((o) => (
+                  <option key={o.zhi} value={o.zhi}>
+                    {o.label} {o.range}
+                  </option>
+                ))}
+                <option value="exact">填具体时间</option>
+              </Select>
+              {form.shichen === 'exact' && <Input type="time" value={form.exactTime} onChange={(e) => set('exactTime', e.target.value)} />}
+            </Row>
+          </Field>
         </div>
+      </Panel>
+
+      <Panel title={isMe ? '我自己说的标签' : 'TA 自己说的标签'}>
+        <SelfTagInput values={form.selfTags} onChange={(v) => set('selfTags', v)} />
       </Panel>
 
       <Panel title="性格标签">
@@ -216,6 +266,7 @@ export function PersonFormPage() {
         <TagInput values={form.taboos} onChange={(v) => set('taboos', v)} placeholder="比如：别问工资、不吃香菜" danger />
       </Panel>
 
+      {!isMe && (
       <Panel title="联系节奏">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <Field label={`久未联系宽限天数（${RELATIONS[form.relation].label}默认 ${RELATIONS[form.relation].decays ? `${defaultGrace} 天` : '不衰减'}）`} hint="超过这个天数没互动会开始掉分并提醒；关系淡了就把这里调大">
@@ -227,12 +278,13 @@ export function PersonFormPage() {
           </label>
         </div>
       </Panel>
+      )}
 
       <Button variant="primary" block onClick={submit}>
-        {editing ? '保存' : '搬进村里'}
+        {editing ? '保存' : isMe ? '建好我的档案' : '搬进村里'}
       </Button>
 
-      {editing && existing && (
+      {editing && existing && !existing.isMe && (
         <>
           <div style={{ height: 24 }} />
           <Button variant="ghost" block iconName="trash" onClick={() => { setDeleteName(''); setConfirmDelete(true); }}>
@@ -262,5 +314,48 @@ export function PersonFormPage() {
         </>
       )}
     </Page>
+  );
+}
+
+/** 对方自己说的标签：MBTI / 血型 / 上升星座 等键值对 */
+function SelfTagInput({ values, onChange }: { values: SelfTag[]; onChange: (v: SelfTag[]) => void }) {
+  const [k, setK] = useState('');
+  const [v, setV] = useState('');
+  const PRESETS = ['MBTI', '血型', '上升星座', '月亮星座'];
+  const add = () => {
+    const key = k.trim();
+    const val = v.trim();
+    if (!key || !val) return;
+    onChange([...values.filter((t) => t.key !== key), { key, value: val }]);
+    setK('');
+    setV('');
+  };
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {PRESETS.map((p) => (
+          <Button key={p} size="small" variant="ghost" onClick={() => setK(p)}>
+            {p}
+          </Button>
+        ))}
+      </div>
+      <Row>
+        <Input value={k} onChange={(e) => setK(e.target.value)} placeholder="比如 MBTI" maxLength={12} />
+        <Input value={v} onChange={(e) => setV(e.target.value)} placeholder="比如 INFJ" maxLength={20} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }} />
+        <Button variant="ghost" iconName="plus" aria-label="添加" onClick={add} />
+      </Row>
+      {values.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {values.map((t) => (
+            <span key={t.key} className="px-corner-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 8px', background: 'var(--paper-dark)', border: '2px solid var(--wood-light)', fontSize: 'var(--fs-sm)' }}>
+              {t.key} · {t.value}
+              <span role="button" aria-label="删除" onClick={() => onChange(values.filter((x) => x.key !== t.key))} style={{ color: 'var(--ink-soft)' }}>
+                ✕
+              </span>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

@@ -24,7 +24,7 @@ export function AchievementWatcher() {
       .bulkAdd(fresh.map((a) => ({ id: a.id, unlockedAt: now })))
       .then(() => {
         play('achievement');
-        fresh.forEach((a, i) => setTimeout(() => toast(`🏆 成就解锁：${a.title}`), i * 600));
+        fresh.forEach((a) => toast(`🏆 成就解锁：${a.title}`, 'achievement'));
       })
       .catch(() => {});
   }, [persons, interactions, quests, unlocked, toast]);

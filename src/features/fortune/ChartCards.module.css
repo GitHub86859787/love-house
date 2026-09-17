@@ -1,0 +1,98 @@
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card {
+  background: var(--white);
+  border: 2px solid #9a6fd0;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cardTitle {
+  font-size: var(--fs-sm);
+  color: #6b3fa0;
+}
+
+.row {
+  font-size: var(--fs-sm);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pillars {
+  display: grid;
+  grid-template-columns: 40px repeat(4, 1fr);
+  gap: 2px;
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+
+.pillars > div {
+  padding: 4px 0;
+  background: var(--paper);
+  border: 2px solid var(--paper-deep);
+}
+
+.pillars .head {
+  background: var(--paper-dark);
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+
+.pillars .gan {
+  font-size: var(--fs-lg);
+  line-height: 24px;
+}
+
+.wux {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+  height: 64px;
+}
+
+.wuxCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+}
+
+.wuxBar {
+  width: 100%;
+  border: 2px solid var(--wood-dark);
+}
+
+.text {
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+  color: var(--ink);
+  user-select: text;
+}
+
+.summaryRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: var(--fs-sm);
+}
+
+.wuxMini {
+  display: flex;
+  gap: 2px;
+}
+
+.wuxMini span {
+  display: inline-block;
+  width: 10px;
+  border: 1px solid var(--wood-dark);
+}

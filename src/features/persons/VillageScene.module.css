@@ -152,3 +152,50 @@
     filter: brightness(1.6) saturate(1.4);
   }
 }
+
+.homeSign {
+  position: absolute;
+  left: 52px;
+  top: 20px;
+}
+
+.homeTag {
+  font-size: 10px;
+  line-height: 12px;
+  color: var(--white);
+  text-shadow: 1px 1px 0 var(--ink);
+}
+
+.meEmpty {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 248, 231, 0.6);
+  border: 2px dashed var(--wood-dark);
+  font-size: var(--fs-xl);
+  color: var(--wood-dark);
+}
+
+.tent {
+  position: absolute;
+  left: 40px;
+  top: 24px;
+}
+
+.entering {
+  animation: enter-dark 420ms steps(6) forwards;
+}
+
+@keyframes enter-dark {
+  to {
+    filter: brightness(0.1);
+  }
+}
+
+.empty {
+  left: 200px;
+  right: auto;
+  width: 200px;
+}

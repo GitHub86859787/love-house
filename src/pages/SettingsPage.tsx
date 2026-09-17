@@ -5,6 +5,10 @@ import { RELATIONS, RELATION_ORDER } from '@/config/relations';
 import { SCORING } from '@/config/scoring';
 import { HOLIDAYS } from '@/config/holidays';
 import { play, setSoundEnabled } from '@/audio/sound';
+import { AiSettings } from '@/features/ai/AiSettings';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { useNavigate } from 'react-router-dom';
+import { Avatar } from '@/pixel/avatar/Avatar';
 import { Page, PageHeader } from '@/app/Layout';
 import { Panel, Inset } from '@/ui/Panel';
 import { Button } from '@/ui/Button';
@@ -54,7 +58,9 @@ function Toggle({ label, hint, checked, onChange }: { label: string; hint?: stri
 
 export function SettingsPage() {
   const toast = useToast();
+  const nav = useNavigate();
   const settings = useSettings();
+  const me = useLiveQuery(() => db.persons.filter((p) => Boolean(p.isMe)).first(), []);
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearText, setClearText] = useState('');
 
@@ -71,6 +77,20 @@ export function SettingsPage() {
   return (
     <Page>
       <PageHeader title="设置" />
+
+      <Panel title="我的档案" tight>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 4 }}>
+          {me ? <Avatar config={me.avatar} scale={2} /> : <div style={{ width: 48, height: 48, border: '2px dashed var(--wood-light)' }} />}
+          <div style={{ flex: 1, fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>
+            {me ? `${me.name} · ${me.birth ? '生辰已填' : '还没填生辰'}` : '和其他村民一样的一份档案：头像、喜好、雷区、笔记、占卜解读。'}
+          </div>
+          <Button size="small" variant="primary" onClick={() => nav(me ? `/person/${me.id}` : '/person/new?me=1')}>
+            {me ? '查看' : '建档案'}
+          </Button>
+        </div>
+      </Panel>
+
+      <AiSettings Toggle={Toggle} />
 
       <Panel title="计分规则">
         <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)', marginBottom: 8 }}>
@@ -162,7 +182,7 @@ export function SettingsPage() {
       </Panel>
 
       <Panel title="关于">
-        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>人情村 v{__APP_VERSION__} · 阶段 3 游戏感</p>
+        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>人情村 v{__APP_VERSION__} · 阶段 5 占卜师</p>
         <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>字体：缝合像素字体 Fusion Pixel（OFL 许可）；农历：lunar-typescript（MIT）</p>
       </Panel>
 
