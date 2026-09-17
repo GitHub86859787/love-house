@@ -1,0 +1,152 @@
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.label {
+  font-size: var(--fs-sm);
+  color: var(--ink-soft);
+  flex: none;
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.note {
+  font-size: var(--fs-sm);
+  color: var(--ink-soft);
+}
+
+.px {
+  image-rendering: pixelated;
+  display: block;
+}
+
+.strip {
+  display: grid;
+  grid-template-columns: repeat(16, 1fr);
+  gap: 0;
+  border: 2px solid var(--wood-dark);
+}
+
+.strip span {
+  display: block;
+  aspect-ratio: 1;
+}
+
+.familyRow {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto auto;
+  gap: 6px;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--paper-deep);
+}
+
+.familyName {
+  min-width: 0;
+  font-size: var(--fs-sm);
+}
+
+.usage {
+  font-size: 10px;
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.swatch {
+  text-align: center;
+}
+
+.chip {
+  width: 40px;
+  height: 28px;
+  border: 2px solid var(--wood-dark);
+}
+
+.chipSmall {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--wood-dark);
+  margin: 0 auto;
+}
+
+.hex {
+  font-size: 9px;
+  color: var(--ink-soft);
+  line-height: 1.3;
+}
+
+.outlineBox {
+  text-align: center;
+  width: 36px;
+}
+
+.rampRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: var(--fs-sm);
+}
+
+.rampRow span {
+  display: inline-block;
+  width: 28px;
+  height: 20px;
+  border: 2px solid var(--wood-dark);
+}
+
+.rampName {
+  width: 40px !important;
+  height: auto !important;
+  border: none !important;
+  color: var(--ink-soft);
+}
+
+.rampOutline {
+  margin-left: 6px;
+}
+
+.demo {
+  overflow-x: auto;
+  padding: 8px;
+  background: #3b2412;
+  border: 2px solid var(--wood-dark);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 8px;
+}
+
+.item {
+  background: var(--white);
+  border: 2px solid var(--paper-deep);
+  padding: 6px;
+}
+
+.pair {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 8px;
+  background: #3b2412;
+  padding: 6px;
+}
+
+.itemName {
+  font-size: 10px;
+  color: var(--ink-soft);
+  text-align: center;
+  margin-top: 4px;
+}

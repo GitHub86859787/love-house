@@ -18,6 +18,7 @@ const CollectionPage = lazy(() => import('@/pages/CollectionPage').then((m) => (
 const FortunePage = lazy(() => import('@/pages/FortunePage').then((m) => ({ default: m.FortunePage })));
 const SelfCheckPage = lazy(() => import('@/pages/SelfCheckPage').then((m) => ({ default: m.SelfCheckPage })));
 const ReviewPage = lazy(() => import('@/pages/ReviewPage').then((m) => ({ default: m.ReviewPage })));
+const PreviewPage = lazy(() => import('@/features/village/preview/PreviewPage').then((m) => ({ default: m.PreviewPage })));
 
 function Loading() {
   return (
@@ -40,6 +41,7 @@ const router = createHashRouter([
       { path: '/fortune', element: L(<FortunePage />) },
       { path: '/selfcheck', element: L(<SelfCheckPage />) },
       { path: '/review', element: L(<ReviewPage />) },
+      { path: '/preview', element: L(<PreviewPage />) },
       { path: '/collection', element: L(<CollectionPage />) },
       { path: '/settings', element: L(<SettingsPage />) },
     ],

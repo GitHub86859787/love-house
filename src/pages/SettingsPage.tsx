@@ -175,6 +175,12 @@ export function SettingsPage() {
             打开
           </Button>
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 8, marginTop: 8, borderTop: '1px dashed var(--paper-deep)' }}>
+          <span style={{ flex: 1, fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>场景预览：新村庄的色卡与图块表，按季节 / 时段切换看。</span>
+          <Button size="small" variant="ghost" onClick={() => nav('/preview')}>
+            打开
+          </Button>
+        </div>
       </Panel>
 
       <Panel title="关于">
