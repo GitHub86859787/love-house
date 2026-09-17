@@ -5,7 +5,7 @@ import { Panel, Inset } from '@/ui/Panel';
 import { Button } from '@/ui/Button';
 import { Field, Input, Row, Select } from '@/ui/Field';
 import { buildChart, chartToText, SHICHEN_OPTIONS } from '@/fortune/chart';
-import { runDateChecks, runReferenceChecks, runZodiacBoundaryChecks, summarize, type CheckRow } from '@/fortune/selfcheck';
+import { runDateChecks, runNatalChecks, runReferenceChecks, runZodiacBoundaryChecks, summarize, type CheckRow } from '@/fortune/selfcheck';
 import { ChartCards, ChartSummaryRow } from '@/features/fortune/ChartCards';
 import type { Birth } from '@/db/types';
 
@@ -55,7 +55,8 @@ export function SelfCheckPage() {
   const ref = useMemo(() => runReferenceChecks(), []);
   const zb = useMemo(() => runZodiacBoundaryChecks(), []);
   const dc = useMemo(() => runDateChecks(), []);
-  const sum = summarize([...ref, ...zb, ...dc]);
+  const nc = useMemo(() => runNatalChecks(), []);
+  const sum = summarize([...ref, ...zb, ...dc, ...nc]);
 
   const [y, setY] = useState('2001');
   const [m, setM] = useState('9');
@@ -92,6 +93,10 @@ export function SelfCheckPage() {
 
       <Panel title="日期换算（月份 ±1 路径）" tight>
         <Table rows={dc} firstCol="检查项" />
+      </Panel>
+
+      <Panel title="本命盘与手动排盘" tight>
+        <Table rows={nc} firstCol="检查项" />
       </Panel>
 
       <Panel title="试算">

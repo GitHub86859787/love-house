@@ -2,7 +2,8 @@
  * 排盘自检：把标准答案表和日期换算用例跑一遍，返回逐项比对结果。
  * 设置页「排盘自检」和单测共用同一份标准答案（reference.ts）。
  */
-import { buildChart, zodiacOf } from './chart';
+import { baziFromManual, buildChart, zodiacOf } from './chart';
+import { ascMc, eclipticLongitude } from './natal';
 import { REFERENCE_CASES, ZODIAC_BOUNDARIES } from './reference';
 import { birthdayInYear, daysUntilBirthday, lunarToSolar } from '@/lib/birthday';
 import { toDateKey } from '@/lib/date';
@@ -69,6 +70,37 @@ export function runDateChecks(): CheckRow[] {
     ['生日当天倒计时', String(daysUntilBirthday({ month: 9, day: 17 }, t)), '0'],
   ];
   return rows.map(([label, actual, expected]) => ({ label, cells: [cell('结果', actual, expected)] }));
+}
+
+/** 本命盘：用日月食、新月这些确定的天象校验行星黄经；上升 / 天顶用几何性质校验 */
+export function runNatalChecks(): CheckRow[] {
+  const diff = (a: number, b: number) => Math.abs(((a - b + 540) % 360) - 180);
+  const ecl = new Date(Date.UTC(2000, 0, 21, 4, 44));
+  const nm = new Date(Date.UTC(2000, 0, 6, 18, 14));
+  const j2000 = new Date(Date.UTC(2000, 0, 1, 12));
+  const sunEcl = eclipticLongitude('sun', ecl);
+  const moonEcl = eclipticLongitude('moon', ecl);
+  const d1 = diff(moonEcl, sunEcl + 180);
+  const d2 = diff(eclipticLongitude('moon', nm), eclipticLongitude('sun', nm));
+  const sunJ = eclipticLongitude('sun', j2000);
+  // 找 RAMC≈270° 的时刻（赤道上春分点正在东升）
+  let ascAt270 = NaN;
+  for (let m = 0; m < 1441; m++) {
+    const d = new Date(Date.UTC(2000, 0, 1) + m * 60000);
+    const r = ascMc(d, 0, 0);
+    if (diff(r.ramc, 270) < 0.15) {
+      ascAt270 = r.asc;
+      break;
+    }
+  }
+  const manual = baziFromManual({ year: '乙亥', month: '甲申', day: '戊寅', hour: '己未' });
+  return [
+    { label: '2000-01-21 月全食：月−日 = 180°', cells: [cell('偏差', `${d1.toFixed(2)}°`, undefined), { label: '判定', actual: d1 < 0.5 ? '通过' : '偏差过大', expected: '通过', ok: d1 < 0.5 }] },
+    { label: '2000-01-06 新月：月 = 日', cells: [cell('偏差', `${d2.toFixed(2)}°`, undefined), { label: '判定', actual: d2 < 0.5 ? '通过' : '偏差过大', expected: '通过', ok: d2 < 0.5 }] },
+    { label: 'J2000 太阳黄经 ≈ 280.4°（摩羯 10°）', cells: [cell('黄经', sunJ.toFixed(1), undefined), { label: '判定', actual: Math.abs(sunJ - 280.37) < 0.5 ? '通过' : '偏差过大', expected: '通过', ok: Math.abs(sunJ - 280.37) < 0.5 }] },
+    { label: '赤道 RAMC=270° 时上升 = 白羊 0°', cells: [cell('上升黄经', Number.isFinite(ascAt270) ? ascAt270.toFixed(1) : '—', undefined), { label: '判定', actual: diff(ascAt270, 0) < 0.5 ? '通过' : '偏差过大', expected: '通过', ok: diff(ascAt270, 0) < 0.5 }] },
+    { label: '手动四柱 乙亥 甲申 戊寅 己未', cells: [cell('五行木', String(manual.wuxing.木), '3'), cell('五行火', String(manual.wuxing.火), '0'), cell('日主', manual.dayMaster, '戊'), cell('纳音', manual.naYin, '山头火')] },
+  ];
 }
 
 export function summarize(rows: CheckRow[]): { total: number; failed: number } {

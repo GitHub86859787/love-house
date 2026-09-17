@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.126.0",
+    "astronomy-engine": "^2.1.19",
     "dexie": "^4.4.6",
     "dexie-react-hooks": "^4.4.0",
     "lunar-typescript": "^1.8.6",

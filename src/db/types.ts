@@ -19,7 +19,23 @@ export interface AvatarConfig {
   featureColor?: string;
 }
 
-/** 生辰：月日必填，年、时、分可选；isLunar 表示过农历生日 */
+/** 出生地：经纬度用于真太阳时校正与本命盘上升点；tz 为该地标准时区（小时，不含夏令时） */
+export interface BirthPlace {
+  name: string;
+  lon: number;
+  lat: number;
+  tz: number;
+}
+
+/** 手动排盘：四柱干支，时柱可空 */
+export interface ManualPillars {
+  year: string;
+  month: string;
+  day: string;
+  hour?: string;
+}
+
+/** 生辰：月日必填，年、时、分可选；isLunar 表示填的日期是农历 */
 export interface Birth {
   year?: number;
   month: number;
@@ -27,6 +43,10 @@ export interface Birth {
   hour?: number;
   minute?: number;
   isLunar?: boolean;
+  /** 生日提醒按哪种历法：默认 both；没有年份时只能按填写的历法 */
+  remind?: 'solar' | 'lunar' | 'both';
+  place?: BirthPlace;
+  manualPillars?: ManualPillars;
 }
 
 export type PreferenceSource = 'manual' | 'ai' | 'fortune';

@@ -33,3 +33,24 @@ describe('公历 / 农历 / JS Date 月份换算', () => {
     expect(isBirthdayToday({ month: 10, day: 17 }, today)).toBe(false);
   });
 });
+
+describe('双历提醒', () => {
+  it('填公历 + 有年份：默认两种历法都提醒', async () => {
+    const { birthdayDatesInYear, birthdayMd } = await import('./birthday');
+    const md = birthdayMd({ year: 1995, month: 8, day: 15 });
+    expect(md.solar).toEqual({ month: 8, day: 15 });
+    expect(md.lunar).toEqual({ month: 7, day: 20 });
+    const ds = birthdayDatesInYear({ year: 1995, month: 8, day: 15 }, 2026).map((b) => `${b.calendar}:${toDateKey(b.date)}`);
+    expect(ds).toContain('solar:2026-08-15');
+    expect(ds.some((x) => x.startsWith('lunar:2026-0'))).toBe(true);
+  });
+  it('没年份只按填写的历法', async () => {
+    const { birthdayDatesInYear } = await import('./birthday');
+    expect(birthdayDatesInYear({ month: 8, day: 15, remind: 'both' }, 2026).map((b) => b.calendar)).toEqual(['solar']);
+    expect(birthdayDatesInYear({ month: 8, day: 15, isLunar: true, remind: 'solar' }, 2026).map((b) => b.calendar)).toEqual(['lunar']);
+  });
+  it('remind = solar 只提醒公历', async () => {
+    const { birthdayDatesInYear } = await import('./birthday');
+    expect(birthdayDatesInYear({ year: 1995, month: 8, day: 15, remind: 'solar' }, 2026).map((b) => b.calendar)).toEqual(['solar']);
+  });
+});

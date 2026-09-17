@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/db';
 import type { AvatarConfig, Birth, SelfTag } from '@/db/types';
-import { SHICHEN_OPTIONS } from '@/fortune/chart';
+import { BirthSection, EMPTY_BIRTH_DRAFT, birthFromDraft, draftFromBirth, type BirthDraft } from '@/features/persons/BirthSection';
 import { createPerson, deletePerson, updatePerson } from '@/db/persons';
 import { addInteraction } from '@/db/interactions';
 import { useSettings } from '@/db/settings';
@@ -23,13 +23,7 @@ interface FormState {
   nickname: string;
   relation: RelationType;
   metOn: string;
-  bMonth: string;
-  bDay: string;
-  bYear: string;
-  isLunar: boolean;
-  /** 时辰：'' 未知，'exact' 具体时间，否则地支 */
-  shichen: string;
-  exactTime: string;
+  birth: BirthDraft;
   selfTags: SelfTag[];
   tags: string[];
   taboos: string[];
@@ -43,12 +37,7 @@ const EMPTY: FormState = {
   nickname: '',
   relation: 'friend',
   metOn: '',
-  bMonth: '',
-  bDay: '',
-  bYear: '',
-  isLunar: false,
-  shichen: '',
-  exactTime: '',
+  birth: EMPTY_BIRTH_DRAFT,
   selfTags: [],
   tags: [],
   taboos: [],
@@ -57,7 +46,14 @@ const EMPTY: FormState = {
   staleMuted: false,
 };
 
+/** 同一路由组件在 /person/new 与 /person/new?me=1、不同 id 之间切换时不会重建，这里按 URL 加 key 强制重建 */
 export function PersonFormPage() {
+  const { id } = useParams();
+  const [params] = useSearchParams();
+  return <PersonFormInner key={`${id ?? 'new'}-${params.get('me') ?? ''}`} />;
+}
+
+function PersonFormInner() {
   const { id } = useParams();
   const [params] = useSearchParams();
   const nav = useNavigate();
@@ -78,12 +74,7 @@ export function PersonFormPage() {
       nickname: existing.nickname ?? '',
       relation: existing.relation,
       metOn: existing.metOn ?? '',
-      bMonth: existing.birth ? String(existing.birth.month) : '',
-      bDay: existing.birth ? String(existing.birth.day) : '',
-      bYear: existing.birth?.year ? String(existing.birth.year) : '',
-      isLunar: existing.birth?.isLunar ?? false,
-      shichen: existing.birth?.hour == null ? '' : existing.birth.minute != null ? 'exact' : SHICHEN_OPTIONS.find((o) => o.hour === existing.birth!.hour)?.zhi ?? 'exact',
-      exactTime: existing.birth?.hour == null ? '' : `${String(existing.birth.hour).padStart(2, '0')}:${String(existing.birth.minute ?? 0).padStart(2, '0')}`,
+      birth: draftFromBirth(existing.birth),
       selfTags: existing.selfTags ?? [],
       tags: existing.tags,
       taboos: existing.taboos,
@@ -96,23 +87,7 @@ export function PersonFormPage() {
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
 
-  const parseBirth = (): Birth | undefined | 'invalid' => {
-    if (!form.bMonth && !form.bDay) return undefined;
-    const month = Number(form.bMonth);
-    const day = Number(form.bDay);
-    if (!(month >= 1 && month <= 12 && day >= 1 && day <= 31)) return 'invalid';
-    const year = form.bYear ? Number(form.bYear) : undefined;
-    if (year !== undefined && !(year >= 1900 && year <= 2100)) return 'invalid';
-    let time: { hour?: number; minute?: number } = {};
-    if (form.shichen === 'exact' && form.exactTime) {
-      const [h, m] = form.exactTime.split(':').map(Number);
-      if (h >= 0 && h <= 23) time = { hour: h, minute: Number.isFinite(m) ? m : 0 };
-    } else if (form.shichen) {
-      const opt = SHICHEN_OPTIONS.find((o) => o.zhi === form.shichen);
-      if (opt) time = { hour: opt.hour };
-    }
-    return { month, day, ...(year ? { year } : {}), ...(form.isLunar ? { isLunar: true } : {}), ...time };
-  };
+  const parseBirth = (): Birth | undefined | 'invalid' => birthFromDraft(form.birth);
 
   const submit = async () => {
     const name = form.name.trim();
@@ -122,7 +97,7 @@ export function PersonFormPage() {
     }
     const birth = parseBirth();
     if (birth === 'invalid') {
-      toast('生日填得不太对', 'error');
+      toast(form.birth.manual ? '手动四柱要把年月日三柱都选完' : '生日填得不太对', 'error');
       return;
     }
     const grace = form.graceOverride.trim() ? Number(form.graceOverride) : undefined;
@@ -226,31 +201,7 @@ export function PersonFormPage() {
             </Field>
             )}
           </Row>
-          <Field label="生日（年份可不填）">
-            <Row>
-              <Input inputMode="numeric" placeholder="月" value={form.bMonth} onChange={(e) => set('bMonth', e.target.value.replace(/\D/g, '').slice(0, 2))} />
-              <Input inputMode="numeric" placeholder="日" value={form.bDay} onChange={(e) => set('bDay', e.target.value.replace(/\D/g, '').slice(0, 2))} />
-              <Input inputMode="numeric" placeholder="年（可选）" value={form.bYear} onChange={(e) => set('bYear', e.target.value.replace(/\D/g, '').slice(0, 4))} />
-            </Row>
-          </Field>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--fs-sm)' }}>
-            <input type="checkbox" checked={form.isLunar} onChange={(e) => set('isLunar', e.target.checked)} style={{ width: 20, height: 20 }} />
-            {isMe ? '我过农历生日' : 'TA 过农历生日（提醒和生日加成按农历算）'}
-          </label>
-          <Field label="出生时辰（可选，占卜师排四柱用）">
-            <Row>
-              <Select value={form.shichen} onChange={(e) => set('shichen', e.target.value)}>
-                <option value="">不知道</option>
-                {SHICHEN_OPTIONS.map((o) => (
-                  <option key={o.zhi} value={o.zhi}>
-                    {o.label} {o.range}
-                  </option>
-                ))}
-                <option value="exact">填具体时间</option>
-              </Select>
-              {form.shichen === 'exact' && <Input type="time" value={form.exactTime} onChange={(e) => set('exactTime', e.target.value)} />}
-            </Row>
-          </Field>
+          <BirthSection value={form.birth} onChange={(b) => set('birth', b)} isMe={isMe} />
         </div>
       </Panel>
 

@@ -96,3 +96,24 @@
   width: 10px;
   border: 1px solid var(--wood-dark);
 }
+
+.natalList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--fs-sm);
+}
+
+.natalRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 2px 0;
+  border-bottom: 1px dashed var(--paper-deep);
+}
+
+.natalGlyph {
+  width: 28px;
+  text-align: center;
+  color: #6b3fa0;
+}

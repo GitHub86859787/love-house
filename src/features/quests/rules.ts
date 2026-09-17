@@ -7,7 +7,7 @@ import type { Settings } from '@/db/settings';
 import { HOLIDAYS } from '@/config/holidays';
 import { MILESTONES, type MilestoneQuestCheck } from '@/config/milestones';
 import { RELATIONS } from '@/config/relations';
-import { birthdayInYear, daysUntilBirthday, lunarToSolar } from '@/lib/birthday';
+import { lunarToSolar, upcomingBirthdays } from '@/lib/birthday';
 import { daysBetween, toDateKey } from '@/lib/date';
 import { daysSinceContact, graceDaysOf, isStale, lastContactDate } from '@/features/scoring/decay';
 import { Solar } from 'lunar-typescript';
@@ -48,21 +48,23 @@ export function generateCandidates(persons: Person[], settings: Settings, today 
   for (const p of real) {
     const name = p.nickname || p.name;
 
-    // 生日：提前 7 / 3 / 当天
+    // 生日：提前 7 / 3 / 当天；公历、农历按提醒设置各出一条
     if (p.birth) {
-      const days = daysUntilBirthday(p.birth, today);
-      const bYear = days === 0 || birthdayInYear(p.birth, year).getTime() >= new Date(year, today.getMonth(), today.getDate()).getTime() ? year : year + 1;
-      const due = toDateKey(birthdayInYear(p.birth, bYear));
-      const step = days === 0 ? 0 : days <= 3 ? 3 : days <= 7 ? 7 : -1;
-      if (step >= 0) {
-        const title = step === 0 ? `今天是 ${name} 的生日！` : `${name} 的生日还有 ${days} 天`;
+      const ups = upcomingBirthdays(p.birth, today);
+      const dual = ups.length > 1;
+      for (const b of ups) {
+        const days = b.days;
+        const step = days === 0 ? 0 : days <= 3 ? 3 : days <= 7 ? 7 : -1;
+        if (step < 0) continue;
+        const calText = dual ? (b.calendar === 'lunar' ? '农历' : '公历') : '';
+        const title = step === 0 ? `今天是 ${name} 的${calText}生日！` : `${name} 的${calText}生日还有 ${days} 天`;
         out.push({
           kind: 'birthday',
-          ruleKey: `birthday:${p.id}:${bYear}:${step}`,
+          ruleKey: `birthday:${p.id}:${b.date.getFullYear()}:${b.calendar}:${step}`,
           personId: p.id,
           title,
           description: step === 0 ? '送礼 ×8，别忘了' : '想想送什么、约在哪里',
-          dueDate: due,
+          dueDate: toDateKey(b.date),
           priority: PRIORITY.birthday - (step === 0 ? 5 : 0),
         });
       }

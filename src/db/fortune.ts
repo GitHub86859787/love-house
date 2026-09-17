@@ -37,7 +37,7 @@ export async function saveReading(person: Person, reading: Reading, inputHash: s
 
 export async function saveSynastry(person: Person, synastry: Synastry, inputHash: string, me?: Person): Promise<void> {
   const now = Date.now();
-  const data = (fortuneData(person) ?? { reading: { dialogue: [], traits: [], guessedLikes: [], tips: [], topics: [], systems: { zodiac: null, numerology: null, bazi: null } }, likesWritten: false }) as FortuneData;
+  const data = (fortuneData(person) ?? { reading: { dialogue: [], traits: [], guessedLikes: [], tips: [], topics: [], systems: { zodiac: null, numerology: null, bazi: null, natal: null } }, likesWritten: false }) as FortuneData;
   data.synastry = { data: synastry, inputHash, createdAt: now, basis: me ? { meBirth: JSON.stringify(me.birth ?? null), otherBirth: JSON.stringify(person.birth ?? null) } : undefined };
   const fortune: FortuneCache = {
     inputHash: person.fortune?.inputHash ?? '',

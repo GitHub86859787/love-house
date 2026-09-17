@@ -1,5 +1,6 @@
 import type { Chart, WuXing } from '@/fortune/chart';
 import styles from './ChartCards.module.css';
+import { NatalWheel } from './NatalWheel';
 
 export const WUXING_COLORS: Record<WuXing, string> = { 木: '#6daa2c', 火: '#e6323c', 土: '#c98b45', 金: '#f5c542', 水: '#6fb7e8' };
 const WUXING_ORDER: WuXing[] = ['木', '火', '土', '金', '水'];
@@ -19,6 +20,8 @@ export function ChartSummaryRow({ chart }: { chart: Chart }) {
       )}
       {chart.shengXiao && <span>属{chart.shengXiao}{chart.benMingNian ? '（本命年）' : ''}</span>}
       {chart.numerology && <span>灵数 {chart.numerology.master}</span>}
+      {chart.natal && <span>☽ {chart.natal.bodies[1].sign.replace('座', '')}</span>}
+      {chart.natal?.asc && <span>上升{chart.natal.asc.sign.replace('座', '')}</span>}
       {chart.bazi && (
         <span className={styles.wuxMini} title="五行分布">
           {WUXING_ORDER.map((k) => (
@@ -31,7 +34,7 @@ export function ChartSummaryRow({ chart }: { chart: Chart }) {
 }
 
 /** 第二层：星座卡 / 灵数卡 / 八字卡 */
-export function ChartCards({ chart, systems }: { chart: Chart; systems?: { zodiac?: string | null; numerology?: string | null; bazi?: string | null } }) {
+export function ChartCards({ chart, systems }: { chart: Chart; systems?: { zodiac?: string | null; numerology?: string | null; bazi?: string | null; natal?: string | null } }) {
   const b = chart.bazi;
   const maxW = b ? Math.max(1, ...Object.values(b.wuxing)) : 1;
   return (
@@ -65,7 +68,10 @@ export function ChartCards({ chart, systems }: { chart: Chart; systems?: { zodia
       )}
       {b && (
         <div className={`${styles.card} px-corner-sm`}>
-          <div className={styles.cardTitle}>☰ 八字卡</div>
+          <div className={styles.cardTitle}>
+            ☰ 八字卡
+            {b.manual && <span style={{ marginLeft: 8, padding: '0 6px', background: '#6b3fa0', color: 'var(--white)', fontSize: 10 }}>手动排盘</span>}
+          </div>
           <div className={styles.pillars}>
             <div className="head" />
             <div className="head">年柱</div>
@@ -105,8 +111,56 @@ export function ChartCards({ chart, systems }: { chart: Chart; systems?: { zodia
             <div style={{ fontSize: 10, color: 'var(--ink-soft)' }}>生肖按春节换（{chart.shengXiao}），年柱按立春换（{chart.pillarShengXiao}年），所以两处不同是正常的。</div>
           )}
           {!b.hour && <div style={{ fontSize: 10, color: 'var(--ink-soft)' }}>时辰未知，时柱空着。补上时辰能看完整四柱。</div>}
+          {b.trueSolarNote && <div style={{ fontSize: 10, color: 'var(--ink-soft)' }}>时柱已按{b.trueSolarNote}。</div>}
+          {b.manual && <div style={{ fontSize: 10, color: 'var(--ink-soft)' }}>四柱是手动填写的，生肖取年柱地支；星婆婆解读以此为准。</div>}
           {systems?.bazi && <p className={styles.text}>{systems.bazi}</p>}
         </div>
+      )}
+      {chart.natal ? (
+        <div className={`${styles.card} px-corner-sm`}>
+          <div className={styles.cardTitle}>☉ 本命盘卡</div>
+          <NatalWheel natal={chart.natal} />
+          <div className={styles.row} style={{ color: 'var(--ink-soft)' }}>
+            {chart.natal.level === 'place' ? '有出生地：含上升、天顶与十二宫（等宫制）' : '无出生地：只有各行星星座，补出生地可看上升与宫位'}
+            {chart.natal.assumedTz && ' · 时间按东八区'}
+          </div>
+          <div className={styles.natalList}>
+            {chart.natal.asc && (
+              <div className={styles.natalRow}>
+                <span className={styles.natalGlyph}>ASC</span>
+                <span>上升</span>
+                <span style={{ flex: 1 }}>{chart.natal.asc.sign}</span>
+                <span style={{ color: 'var(--ink-soft)' }}>{chart.natal.asc.degree.toFixed(0)}°</span>
+              </div>
+            )}
+            {chart.natal.mc && (
+              <div className={styles.natalRow}>
+                <span className={styles.natalGlyph}>MC</span>
+                <span>天顶</span>
+                <span style={{ flex: 1 }}>{chart.natal.mc.sign}</span>
+                <span style={{ color: 'var(--ink-soft)' }}>{chart.natal.mc.degree.toFixed(0)}°</span>
+              </div>
+            )}
+            {chart.natal.bodies.map((b) => (
+              <div key={b.key} className={styles.natalRow}>
+                <span className={styles.natalGlyph}>{b.glyph}</span>
+                <span>{b.name}</span>
+                <span style={{ flex: 1 }}>{b.sign}</span>
+                <span style={{ color: 'var(--ink-soft)' }}>
+                  {b.degree.toFixed(0)}°{b.house ? ` · ${b.house} 宫` : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+          {systems?.natal && <p className={styles.text}>{systems.natal}</p>}
+        </div>
+      ) : (
+        chart.level >= 2 && (
+          <div className={`${styles.card} px-corner-sm`} style={{ borderStyle: 'dashed' }}>
+            <div className={styles.cardTitle}>☉ 本命盘卡</div>
+            <div className={styles.row} style={{ color: 'var(--ink-soft)' }}>只有生日时只能看太阳星座（见星座卡）。填上出生时间可以看月亮与各行星的星座，再填出生地可以看上升与十二宫。</div>
+          </div>
+        )
       )}
     </div>
   );

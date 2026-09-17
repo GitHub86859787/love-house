@@ -17,6 +17,7 @@ export const ReadingSchema = z.object({
     zodiac: z.string().nullable(),
     numerology: z.string().nullable(),
     bazi: z.string().nullable(),
+    natal: z.string().nullable(),
   }),
 });
 export type Reading = z.infer<typeof ReadingSchema>;

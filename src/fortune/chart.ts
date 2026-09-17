@@ -2,8 +2,9 @@
  * 排盘：全部本地计算，不交给 AI。
  * 星座 / 生肖 / 生命灵数 / 八字（年月日时四柱）/ 五行分布 / 本命年 / 完整度等级。
  */
-import { Lunar, Solar } from 'lunar-typescript';
-import type { Birth } from '@/db/types';
+import { Lunar, LunarUtil, Solar } from 'lunar-typescript';
+import type { Birth, ManualPillars } from '@/db/types';
+import { buildNatal, natalToText, type NatalChart } from './natal';
 
 export type CompletenessLevel = 0 | 1 | 2 | 3;
 
@@ -51,6 +52,10 @@ export interface BaziInfo {
   lunarText: string;
   /** 节气 */
   jieQi?: string;
+  /** 手动排盘 */
+  manual?: boolean;
+  /** 真太阳时校正说明 */
+  trueSolarNote?: string;
 }
 
 export interface Chart {
@@ -70,6 +75,8 @@ export interface Chart {
   lunarInputNote?: string;
   /** 年柱地支对应的生肖（按立春切换），与 shengXiao（按春节切换）可能不同 */
   pillarShengXiao?: string;
+  /** 本命盘（有出生时间才有） */
+  natal?: NatalChart | null;
 }
 
 const ZODIACS: (ZodiacInfo & { from: [number, number]; to: [number, number] })[] = [
@@ -137,6 +144,37 @@ function pillar(ganZhi: string, wx: string): Pillar {
   return { gan: ganZhi[0], zhi: ganZhi[1], ganWuXing: wx[0] as WuXing, zhiWuXing: wx[1] as WuXing };
 }
 
+/** 均时差（分钟），Spencer 近似，误差约半分钟 */
+export function equationOfTime(dayOfYear: number): number {
+  const b = ((2 * Math.PI) / 365) * (dayOfYear - 81);
+  return 9.87 * Math.sin(2 * b) - 7.53 * Math.cos(b) - 1.5 * Math.sin(b);
+}
+
+/** 真太阳时校正量（分钟）：经度差 ×4 + 均时差 */
+export function trueSolarOffsetMinutes(lon: number, tz: number, dayOfYear: number): number {
+  return (lon - tz * 15) * 4 + equationOfTime(dayOfYear);
+}
+
+function dayOfYear(y: number, m: number, d: number): number {
+  return Math.round((Date.UTC(y, m - 1, d) - Date.UTC(y, 0, 1)) / 86400000) + 1;
+}
+
+/** 有出生地且有时间时，把钟表时间换成真太阳时；返回校正后的年月日时分与说明 */
+export function applyTrueSolar(birth: Birth & { year: number }): { year: number; month: number; day: number; hour: number; minute: number; note?: string } | null {
+  if (birth.hour == null || !birth.place) return null;
+  // 先把（可能是农历的）日期换成公历
+  const base = birthToSolar({ ...birth, place: undefined });
+  const y = base.getYear();
+  const m = base.getMonth();
+  const d = base.getDay();
+  const offset = trueSolarOffsetMinutes(birth.place.lon, birth.place.tz, dayOfYear(y, m, d));
+  const t = new Date(Date.UTC(y, m - 1, d, birth.hour, birth.minute ?? 0));
+  t.setUTCMinutes(t.getUTCMinutes() + Math.round(offset));
+  const hh = (n: number) => String(n).padStart(2, '0');
+  const note = `${birth.place.name}真太阳时：${hh(birth.hour)}:${hh(birth.minute ?? 0)} → ${hh(t.getUTCHours())}:${hh(t.getUTCMinutes())}（${offset >= 0 ? '+' : ''}${Math.round(offset)} 分）${t.getUTCDate() !== d ? '，跨到相邻一天' : ''}`;
+  return { year: t.getUTCFullYear(), month: t.getUTCMonth() + 1, day: t.getUTCDate(), hour: t.getUTCHours(), minute: t.getUTCMinutes(), note };
+}
+
 /** 生日 → 公历 Solar（农历生日按出生年换算） */
 export function birthToSolar(birth: Birth & { year: number }): Solar {
   const hour = birth.hour ?? 0;
@@ -155,14 +193,30 @@ export function birthToSolar(birth: Birth & { year: number }): Solar {
   return Solar.fromYmdHms(birth.year, birth.month, birth.day, hour, minute, 0);
 }
 
-export function baziOf(birth: Birth & { year: number }, hasHour: boolean): BaziInfo {
-  const solar = birthToSolar(birth);
-  const lunar = solar.getLunar();
-  const ec = lunar.getEightChar();
-  const year = pillar(ec.getYear(), ec.getYearWuXing());
-  const month = pillar(ec.getMonth(), ec.getMonthWuXing());
-  const day = pillar(ec.getDay(), ec.getDayWuXing());
-  const hour = hasHour ? pillar(ec.getTime(), ec.getTimeWuXing()) : null;
+function pillarFromGanZhi(gz: string): Pillar {
+  const gan = gz[0];
+  const zhi = gz[1];
+  return { gan, zhi, ganWuXing: LunarUtil.WU_XING_GAN[gan] as WuXing, zhiWuXing: LunarUtil.WU_XING_ZHI[zhi] as WuXing };
+}
+
+export const GAN_LIST = LunarUtil.GAN.filter(Boolean);
+export const ZHI_LIST = LunarUtil.ZHI.filter(Boolean);
+
+/** 手动填的四柱 → 排盘信息（生肖取年柱地支） */
+export function baziFromManual(mp: ManualPillars): BaziInfo {
+  const year = pillarFromGanZhi(mp.year);
+  const month = pillarFromGanZhi(mp.month);
+  const day = pillarFromGanZhi(mp.day);
+  const hour = mp.hour ? pillarFromGanZhi(mp.hour) : null;
+  return finishBazi(year, month, day, hour, LunarUtil.NAYIN[mp.year] ?? '', '手动排盘', undefined, true);
+}
+
+export function shengXiaoOfZhi(zhi: string): string {
+  const idx = LunarUtil.ZHI.indexOf(zhi);
+  return idx > 0 ? LunarUtil.SHENGXIAO[idx] : '';
+}
+
+function finishBazi(year: Pillar, month: Pillar, day: Pillar, hour: Pillar | null, naYin: string, lunarText: string, jieQi: string | undefined, manual: boolean, trueSolarNote?: string): BaziInfo {
   const wuxing: Record<WuXing, number> = { 木: 0, 火: 0, 土: 0, 金: 0, 水: 0 };
   for (const p of [year, month, day, hour]) {
     if (!p) continue;
@@ -171,7 +225,6 @@ export function baziOf(birth: Birth & { year: number }, hasHour: boolean): BaziI
   }
   const max = Math.max(...Object.values(wuxing));
   const keys = Object.keys(wuxing) as WuXing[];
-  const jq = lunar.getJieQi();
   return {
     year,
     month,
@@ -182,14 +235,31 @@ export function baziOf(birth: Birth & { year: number }, hasHour: boolean): BaziI
     strongest: keys.filter((k) => wuxing[k] === max),
     dayMaster: day.gan,
     dayMasterWuXing: day.ganWuXing,
-    naYin: ec.getYearNaYin(),
-    lunarText: `${lunar.getYearInChinese()}年${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}`,
-    jieQi: jq || undefined,
+    naYin,
+    lunarText,
+    jieQi,
+    manual: manual || undefined,
+    trueSolarNote,
   };
+}
+
+export function baziOf(birth: Birth & { year: number }, hasHour: boolean): BaziInfo {
+  if (birth.manualPillars) return baziFromManual(birth.manualPillars);
+  const ts = hasHour ? applyTrueSolar(birth) : null;
+  const solar = ts ? Solar.fromYmdHms(ts.year, ts.month, ts.day, ts.hour, ts.minute, 0) : birthToSolar(birth);
+  const lunar = solar.getLunar();
+  const ec = lunar.getEightChar();
+  const year = pillar(ec.getYear(), ec.getYearWuXing());
+  const month = pillar(ec.getMonth(), ec.getMonthWuXing());
+  const day = pillar(ec.getDay(), ec.getDayWuXing());
+  const hour = hasHour ? pillar(ec.getTime(), ec.getTimeWuXing()) : null;
+  const jq = lunar.getJieQi();
+  return finishBazi(year, month, day, hour, ec.getYearNaYin(), `${lunar.getYearInChinese()}年${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}`, jq || undefined, false, ts?.note);
 }
 
 export function completenessOf(birth?: Birth): CompletenessLevel {
   if (!birth) return 0;
+  if (birth.manualPillars) return birth.manualPillars.hour ? 3 : 2;
   if (!birth.year) return 1;
   if (birth.hour == null) return 2;
   return 3;
@@ -199,7 +269,7 @@ export const LEVEL_LABELS: Record<CompletenessLevel, string> = {
   0: '没有生日',
   1: '只有月日：能看星座',
   2: '有年月日：星座、生肖、灵数、八字三柱、五行',
-  3: '有时辰：完整四柱',
+  3: '有时辰：完整四柱、本命盘各行星星座；再填出生地可看上升与十二宫',
 };
 
 export function buildChart(birth: Birth | undefined, today = new Date()): Chart {
@@ -219,6 +289,13 @@ export function buildChart(birth: Birth | undefined, today = new Date()): Chart 
   chart.zodiac = zodiacOf(sm, sd);
   chart.solarText = `${sm} 月 ${sd} 日`;
   if (birth.isLunar) chart.lunarInputNote = `按农历 ${birth.month} 月 ${birth.day} 日换算为公历 ${sm} 月 ${sd} 日${birth.year ? '' : '（按今年）'}`;
+  if (birth.manualPillars && !birth.year) {
+    // 没有年份但手动填了四柱：生肖与八字都以手动值为准
+    chart.bazi = baziFromManual(birth.manualPillars);
+    chart.shengXiao = shengXiaoOfZhi(birth.manualPillars.year[1]);
+    if (birth.manualPillars.hour) chart.shiChen = `${birth.manualPillars.hour[1]}时`;
+    return chart;
+  }
   if (!birth.year) return chart;
 
   const full = { ...birth, year: birth.year };
@@ -230,7 +307,12 @@ export function buildChart(birth: Birth | undefined, today = new Date()): Chart 
   chart.pillarShengXiao = lunar.getYearShengXiaoByLiChun();
   chart.numerology = numerologyOf(solar.getYear(), solar.getMonth(), solar.getDay());
   chart.bazi = baziOf(full, level === 3);
-  if (level === 3 && birth.hour != null) chart.shiChen = shiChenOf(birth.hour);
+  if (birth.manualPillars) {
+    chart.shengXiao = shengXiaoOfZhi(birth.manualPillars.year[1]);
+    chart.pillarShengXiao = chart.shengXiao;
+    if (birth.manualPillars.hour) chart.shiChen = `${birth.manualPillars.hour[1]}时`;
+  } else if (level === 3 && birth.hour != null) chart.shiChen = shiChenOf(birth.hour);
+  chart.natal = buildNatal(birth);
   // 本命年：今年农历年的生肖 == 出生农历年的生肖（同样按春节切换）
   const nowLunar = Solar.fromYmd(today.getFullYear(), today.getMonth() + 1, today.getDate()).getLunar();
   chart.benMingNian = nowLunar.getYearShengXiao() === chart.shengXiao;
@@ -248,8 +330,10 @@ export function chartToText(chart: Chart): string {
     const b = chart.bazi;
     const p = (x: Pillar | null) => (x ? `${x.gan}${x.zhi}（${x.ganWuXing}${x.zhiWuXing}）` : '未知');
     lines.push(`八字：年柱 ${p(b.year)}，月柱 ${p(b.month)}，日柱 ${p(b.day)}，时柱 ${p(b.hour)}${b.hour ? '' : '（时辰未知，时柱缺失）'}`);
-    lines.push(`日主：${b.dayMaster}（${b.dayMasterWuXing}）；年柱纳音：${b.naYin}；农历 ${b.lunarText}`);
+    lines.push(`日主：${b.dayMaster}（${b.dayMasterWuXing}）；年柱纳音：${b.naYin}；${b.manual ? '八字为用户手动填写' : `农历 ${b.lunarText}`}`);
+    if (b.trueSolarNote) lines.push(`时柱已按${b.trueSolarNote}`);
     lines.push(`五行分布：${(Object.keys(b.wuxing) as WuXing[]).map((k) => `${k}${b.wuxing[k]}`).join(' ')}；最旺：${b.strongest.join('、')}；缺：${b.missing.length ? b.missing.join('、') : '无'}`);
   }
+  if (chart.natal) lines.push(natalToText(chart.natal));
   return lines.join('\n');
 }

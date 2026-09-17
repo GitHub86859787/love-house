@@ -28,7 +28,7 @@ import { FortuneTab } from '@/features/fortune/FortuneTab';
 import type { MilestoneConfig } from '@/config/milestones';
 import { uid } from '@/lib/id';
 import { formatDateTime, formatRelative } from '@/lib/date';
-import { daysUntilBirthday, formatBirth } from '@/lib/birthday';
+import { formatBirth, upcomingBirthdays } from '@/lib/birthday';
 import { useSettings } from '@/db/settings';
 import styles from './PersonDetailPage.module.css';
 
@@ -79,8 +79,9 @@ export function PersonDetailPage() {
   const hearts = heartsOf(person.affection);
   const golden = hearts >= SCORING.maxHearts;
   const ghost = !person.isMe && isStale(person, settings);
-  const birthdayDays = person.birth ? daysUntilBirthday(person.birth) : null;
-  const birthdayHint = birthdayDays === null ? '' : birthdayDays === 0 ? ' · 就是今天！' : ` · 还有 ${birthdayDays} 天`;
+  const nextBirthday = person.birth ? upcomingBirthdays(person.birth)[0] : undefined;
+  const dualBirthday = person.birth ? upcomingBirthdays(person.birth).length > 1 : false;
+  const birthdayHint = !nextBirthday ? '' : nextBirthday.days === 0 ? ` · ${dualBirthday ? (nextBirthday.calendar === 'lunar' ? '农历' : '公历') : ''}生日就是今天！` : ` · ${dualBirthday ? (nextBirthday.calendar === 'lunar' ? '农历' : '公历') : ''}还有 ${nextBirthday.days} 天`;
   const toNextHeart = person.affection >= SCORING.maxPoints ? null : SCORING.pointsPerHeart - (person.affection % SCORING.pointsPerHeart);
 
   const addNote = async () => {

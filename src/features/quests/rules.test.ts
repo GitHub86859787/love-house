@@ -30,15 +30,26 @@ const keys = (ps: Person[]) => generateCandidates(ps, DEFAULT_SETTINGS, today).m
 
 describe('generateCandidates', () => {
   it('生日提前 7 / 3 / 当天', () => {
-    expect(keys([person({ birth: { month: 9, day: 24 } })])).toContain('birthday:p:2026:7');
-    expect(keys([person({ birth: { month: 9, day: 19 } })])).toContain('birthday:p:2026:3');
-    expect(keys([person({ birth: { month: 9, day: 17 } })])).toContain('birthday:p:2026:0');
+    expect(keys([person({ birth: { month: 9, day: 24 } })])).toContain('birthday:p:2026:solar:7');
+    expect(keys([person({ birth: { month: 9, day: 19 } })])).toContain('birthday:p:2026:solar:3');
+    expect(keys([person({ birth: { month: 9, day: 17 } })])).toContain('birthday:p:2026:solar:0');
     expect(keys([person({ birth: { month: 9, day: 30 } })]).some((k) => k.startsWith('birthday'))).toBe(false);
   });
   it('农历生日按农历：2026-09-25 是八月十五', () => {
     const k = generateCandidates([person({ birth: { month: 8, day: 15, isLunar: true } })], DEFAULT_SETTINGS, new Date(2026, 8, 18)).map((c) => c.ruleKey);
-    expect(k).toContain('birthday:p:2026:7');
+    expect(k).toContain('birthday:p:2026:lunar:7');
     expect(keys([person({ birth: { month: 8, day: 15, isLunar: true } })]).some((x) => x.startsWith('birthday'))).toBe(false);
+  });
+  it('有年份且两种历法都提醒时，公历、农历各出一条', () => {
+    // 1995-08-15 公历 = 农历七月二十；2026 年农历七月二十 = 公历 9/1，公历生日 8/15
+    const aug14 = new Date(2026, 7, 14);
+    const k = generateCandidates([person({ birth: { year: 1995, month: 8, day: 15 } })], DEFAULT_SETTINGS, aug14).map((c) => c.ruleKey);
+    expect(k).toContain('birthday:p:2026:solar:3');
+    const aug28 = new Date(2026, 7, 29);
+    const k2 = generateCandidates([person({ birth: { year: 1995, month: 8, day: 15 } })], DEFAULT_SETTINGS, aug28).map((c) => c.ruleKey);
+    expect(k2).toContain('birthday:p:2026:lunar:3');
+    const only = generateCandidates([person({ birth: { year: 1995, month: 8, day: 15, remind: 'solar' } })], DEFAULT_SETTINGS, aug28).map((c) => c.ruleKey);
+    expect(only.some((x) => x.includes('lunar'))).toBe(false);
   });
   it('久未联系与资料补全', () => {
     const k = keys([person({ lastInteractionAt: today.getTime() - 20 * DAY })]);
