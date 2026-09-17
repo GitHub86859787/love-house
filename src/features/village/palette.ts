@@ -16,7 +16,7 @@ export interface Family {
   usage: string;
 }
 
-export type FamilyKey = 'ink' | 'wood' | 'earth' | 'stone' | 'brick' | 'plaster' | 'tile' | 'grass' | 'autumn' | 'snow' | 'water' | 'sky' | 'night' | 'gold' | 'pink' | 'purple';
+export type FamilyKey = 'ink' | 'wood' | 'earth' | 'stone' | 'brick' | 'plaster' | 'tile' | 'grass' | 'autumn' | 'snow' | 'water' | 'mist' | 'night' | 'gold' | 'pink' | 'purple';
 
 // 先定各阶颜色，描边色在下面按色系引用
 const C = {
@@ -31,7 +31,7 @@ const C = {
   autumn: { dark: '#94682a', base: '#c99a3e', light: '#e6c46a' },
   snow: { dark: '#a8b8d0', base: '#d6e2ee', light: '#f1f5f8' },
   water: { dark: '#2c5d94', base: '#3f8fcf', light: '#7ec8ee' },
-  sky: { dark: '#4f95cf', base: '#86c3ec', light: '#c4e5f7' },
+  mist: { dark: '#66739f', base: '#8f9dbf', light: '#c0c3dc' },
   night: { dark: '#1a1f3f', base: '#2c3465', light: '#4b5590' },
   gold: { dark: '#b0791c', base: '#f0b83e', light: '#ffe08c' },
   pink: { dark: '#b04a6e', base: '#e07a95', light: '#f7b6c6' },
@@ -50,8 +50,8 @@ export const FAMILIES: Family[] = [
   { key: 'autumn', label: '秋草', ...C.autumn, outline: C.wood.dark, usage: '秋草地、麦穗、稻草、芦苇' },
   { key: 'snow', label: '雪', ...C.snow, outline: C.stone.dark, usage: '冬季地面、屋顶积雪、冰面、雪人' },
   { key: 'water', label: '水', ...C.water, outline: C.water.dark, usage: '溪、湖、波纹' },
-  { key: 'sky', label: '昼天', ...C.sky, outline: C.water.dark, usage: '天空边缘、星星、湖边小屋窗' },
-  { key: 'night', label: '夜天', ...C.night, outline: C.night.dark, usage: '夜晚换色基底、影子、灰化剪影' },
+  { key: 'mist', label: '远山 / 雾', ...C.mist, outline: C.night.dark, usage: '顶部远山、天空边缘、昼夜过渡中间色、晨雾' },
+  { key: 'night', label: '夜天', ...C.night, outline: C.night.dark, usage: '夜晚换色基底、影子、灰化剪影、星星用雪亮阶' },
   { key: 'gold', label: '金', ...C.gold, outline: C.wood.dark, usage: '灯光、光晕、水晶球、麦穗头、满心金星' },
   { key: 'pink', label: '粉', ...C.pink, outline: C.brick.dark, usage: '春樱、湖边小屋屋顶、心形气泡' },
   { key: 'purple', label: '紫', ...C.purple, outline: C.night.dark, usage: '帐篷、水晶球座、茶馆幌子' },
