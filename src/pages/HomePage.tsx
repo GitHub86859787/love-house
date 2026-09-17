@@ -27,7 +27,7 @@ export function HomePage() {
 
   return (
     <Page>
-      <PageHeader title="人情村" right={<span style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>{dateText}</span>} />
+      <PageHeader title="人情村" subtitle={dateText} />
 
       <VillageScene model={model} />
 

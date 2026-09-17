@@ -58,6 +58,8 @@ export interface SelfTag {
 /** 占卜师解读缓存（阶段 5 使用，这里先留字段） */
 export interface FortuneCache {
   inputHash: string;
+  /** 这份解读依据的生辰 / 关系快照，用于判断"改过生日"还是"关系变了" */
+  basis?: { birth: string; relation: string; promptVersion: number };
   createdAt: number;
   data: unknown;
   /** 被我标记为"不准"的推测文本 */

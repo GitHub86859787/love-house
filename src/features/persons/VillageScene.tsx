@@ -69,15 +69,14 @@ export function VillageScene({ model }: Props) {
         ))}
 
         {/* 星婆婆的帐篷：村口另一头 */}
-        <div className={styles.slot} onClick={enterTent} role="link" aria-label="星婆婆的帐篷" style={{ width: 128 }}>
+        <div className={`${styles.slot} ${styles.tentSlot}`} onClick={enterTent} role="link" aria-label="星婆婆的帐篷">
           <Sprite grid={TENT} scale={2} className={styles.tent} />
-          <div className={styles.villager} style={{ left: 8, bottom: 44 }}>
+          <div className={styles.tentTeller}>
             <Avatar config={fortuneTellerAvatar} scale={2} />
           </div>
-          <span className={styles.name}>{FORTUNE_TELLER.name}</span>
-          <div className={styles.hearts}>
-            <span className={styles.homeTag}>占卜屋</span>
-          </div>
+          <span className={styles.name} style={{ bottom: 8 }}>
+            {FORTUNE_TELLER.name}的帐篷
+          </span>
         </div>
 
         {model.villagers.length === 0 && <div className={styles.empty}>村里还没有人，点下面的按钮认识第一位村民吧</div>}

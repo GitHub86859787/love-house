@@ -20,10 +20,31 @@
 }
 
 .header {
+  position: sticky;
+  top: var(--safe-top);
+  z-index: 40;
+  margin: -12px -12px 0;
+  padding: 8px 12px 0;
+  background: var(--paper-deep);
+  border-bottom: 2px solid var(--wood-light);
+}
+
+.headerRow {
   display: flex;
   align-items: center;
   gap: 12px;
   min-height: 40px;
+}
+
+.statusLine {
+  height: 24px;
+  line-height: 24px;
+  font-size: var(--fs-sm);
+  color: var(--ink-soft);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  padding: 0 4px;
 }
 
 .header h1 {

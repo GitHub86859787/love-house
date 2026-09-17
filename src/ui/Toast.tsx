@@ -1,20 +1,33 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
-interface ToastItem {
+export interface ToastItem {
   id: number;
   text: string;
   kind: 'info' | 'error' | 'achievement';
 }
 
-const ToastCtx = createContext<(text: string, kind?: ToastItem['kind']) => void>(() => {});
+interface ToastState {
+  current: ToastItem | null;
+  leaving: boolean;
+}
+
+const PushCtx = createContext<(text: string, kind?: ToastItem['kind']) => void>(() => {});
+const StateCtx = createContext<ToastState>({ current: null, leaving: false });
 
 export function useToast() {
-  return useContext(ToastCtx);
+  return useContext(PushCtx);
+}
+
+/** 顶栏状态行用它来显示当前提示 */
+export function useToastState() {
+  return useContext(StateCtx);
 }
 
 const DURATION: Record<ToastItem['kind'], number> = { info: 2000, error: 2600, achievement: 2600 };
 
-/** 提示：排队一条条出，固定在页面顶部，不挡任何按钮 */
+/**
+ * 提示：排队一条条出。不再悬浮覆盖内容，而是显示在页面顶栏下方的状态行里（见 PageHeader）。
+ */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const queue = useRef<ToastItem[]>([]);
   const [current, setCurrent] = useState<ToastItem | null>(null);
@@ -26,17 +39,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setCurrent(next ?? null);
   }, []);
 
-  const push = useCallback(
-    (text: string, kind: ToastItem['kind'] = 'info') => {
-      const item = { id: Date.now() + Math.random(), text, kind };
-      queue.current.push(item);
-      setCurrent((cur) => {
-        if (cur) return cur;
-        return queue.current.shift() ?? null;
-      });
-    },
-    [],
-  );
+  const push = useCallback((text: string, kind: ToastItem['kind'] = 'info') => {
+    const item = { id: Date.now() + Math.random(), text, kind };
+    queue.current.push(item);
+    setCurrent((cur) => cur ?? queue.current.shift() ?? null);
+  }, []);
 
   useEffect(() => {
     if (!current) return;
@@ -48,41 +55,35 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     };
   }, [current, showNext]);
 
-  const value = useMemo(() => push, [push]);
+  const state = useMemo(() => ({ current, leaving }), [current, leaving]);
   return (
-    <ToastCtx.Provider value={value}>
-      {children}
-      <div
-        style={{
-          position: 'fixed',
-          left: 0,
-          right: 0,
-          top: 'calc(var(--safe-top) + 8px)',
-          display: 'flex',
-          justifyContent: 'center',
-          pointerEvents: 'none',
-          zIndex: 300,
-        }}
-      >
-        {current && (
-          <div
-            key={current.id}
-            className="px-corner-sm"
-            role="status"
-            style={{
-              background: current.kind === 'error' ? 'var(--danger)' : current.kind === 'achievement' ? 'var(--gold-dark)' : 'var(--wood-dark)',
-              color: current.kind === 'achievement' ? 'var(--white)' : 'var(--paper)',
-              border: `2px solid ${current.kind === 'achievement' ? 'var(--gold)' : 'var(--wood-light)'}`,
-              padding: '6px 16px',
-              fontSize: 'var(--fs-sm)',
-              maxWidth: 'calc(100% - 32px)',
-              animation: leaving ? 'fade-in 160ms steps(3) reverse both' : 'pop-in 160ms steps(4) both',
-            }}
-          >
-            {current.text}
-          </div>
-        )}
-      </div>
-    </ToastCtx.Provider>
+    <PushCtx.Provider value={push}>
+      <StateCtx.Provider value={state}>{children}</StateCtx.Provider>
+    </PushCtx.Provider>
+  );
+}
+
+/** 状态行里的提示内容（由 PageHeader 渲染） */
+export function ToastLine({ fallback }: { fallback?: ReactNode }) {
+  const { current, leaving } = useToastState();
+  if (!current) return <>{fallback}</>;
+  const color = current.kind === 'error' ? 'var(--danger)' : current.kind === 'achievement' ? 'var(--gold-dark)' : 'var(--ink)';
+  return (
+    <span
+      key={current.id}
+      role="status"
+      style={{
+        color,
+        fontWeight: current.kind === 'achievement' ? 'bold' : undefined,
+        animation: leaving ? 'fade-in 160ms steps(3) reverse both' : 'pop-in 160ms steps(4) both',
+        display: 'inline-block',
+        maxWidth: '100%',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {current.text}
+    </span>
   );
 }

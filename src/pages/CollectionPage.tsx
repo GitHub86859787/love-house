@@ -41,7 +41,7 @@ export function CollectionPage() {
 
   return (
     <Page>
-      <PageHeader title="图鉴" />
+      <PageHeader title="图鉴" subtitle="礼物、人物卡与成就" />
       <Panel tight>
         <Tabs tabs={TABS} value={tab} onChange={setTab} />
         {tab === 'gifts' && <GiftTab type="gift" interactions={interactions ?? []} persons={persons ?? []} />}

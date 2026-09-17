@@ -35,5 +35,5 @@ export interface FortuneData {
   reading: Reading & { traitVerdicts?: ('hit' | 'miss' | null)[] };
   /** 推测喜好是否已写入喜好列表 */
   likesWritten: boolean;
-  synastry?: { data: Synastry; inputHash: string; createdAt: number };
+  synastry?: { data: Synastry; inputHash: string; createdAt: number; basis?: { meBirth: string; otherBirth: string } };
 }

@@ -47,7 +47,7 @@ await page.evaluate(async ({ ids }) => {
       p.notes = [{ id: 'n1', text: '今天她说最近迷上手冲咖啡，但闻不了香菜味，周末想去爬山', createdAt: now - 86400000 }, { id: 'n2', text: '她提到公司最近在裁员，有点焦虑，别主动问工作', createdAt: now - 3 * 86400000, aiProcessedAt: now - 2 * 86400000 }];
       p.preferences = [...p.preferences, { id: 'g1', name: '露营', category: 'activity', tier: 'like', note: '双鱼座常喜欢亲近自然的活动', source: 'fortune', createdAt: now }, { id: 'g2', name: '手账文具', category: 'item', tier: 'like', note: '灵数 4 的人可能喜欢有秩序感的小物', source: 'fortune', createdAt: now }];
       p.fortune = {
-        inputHash: 'seed', createdAt: now, rejected: [], hits: 0, misses: 0, lastAskedAt: now,
+        inputHash: 'seed', basis: { birth: JSON.stringify({ month: 3, day: 12, year: 1998 }), relation: 'friend', promptVersion: 1 }, createdAt: now, rejected: [], hits: 0, misses: 0, lastAskedAt: now,
         data: { likesWritten: true, reading: {
           dialogue: ['哟，小雨这孩子，双鱼座的，三月里生的。我看她像一泓春水，表面上软和，底下有自己的流向。', '灵数算出来是 4，这样的人也许嘴上爱吐槽，心里头却是最讲规矩、最靠得住的那种。你说她"靠谱"，倒是对得上。', '八字里木旺，火少了些。木旺的人可能主意正、生长力强；火少，也许不太爱把热情挂在脸上，得慢慢处。', '和她相处，别急着往前冲。她要的是你稳稳当当地在那儿。'],
           traits: [{ text: '嘴硬心软，吐槽是关心的一种', basis: '星座（双鱼）' }, { text: '做事讲秩序，讨厌临时变卦', basis: '灵数 4' }, { text: '热情藏在里头，不轻易外露', basis: '八字五行（火少）' }, { text: '对自然和水边有亲近感', basis: '星座（水象）' }],
@@ -88,7 +88,7 @@ await page.waitForURL(/#\/fortune/);
 await page.waitForSelector('text=占卜屋');
 await page.waitForTimeout(1800);
 await shot('04-fortune-intro');
-for (let i = 0; i < 6; i++) { await page.locator('[role=button]').filter({ hasText: '星婆婆' }).first().click(); await page.waitForTimeout(150); }
+for (let i = 0; i < 6; i++) { await page.locator('div[role=button]').filter({ hasText: '全部显示' }).first().click(); await page.waitForTimeout(150); }
 await page.getByText('小雨', { exact: true }).click();
 await page.waitForTimeout(300);
 await shot('05-fortune-pick');
@@ -103,6 +103,19 @@ await page.getByRole('button', { name: '看排盘细节' }).click();
 await page.waitForTimeout(300);
 await page.getByText('八字卡').scrollIntoViewIfNeeded();
 await shot('07-fortune-chart');
+
+// 改生日 → 解读过期提示
+await page.goto(BASE + `#/person/${ids.xiaoyu}/edit`);
+await page.getByRole('heading', { name: '编辑村民' }).waitFor();
+await page.getByPlaceholder('日').fill('13');
+await page.getByRole('button', { name: '保存' }).click();
+await page.waitForURL(/#\/person\/[^/]+$/);
+await page.goto(BASE + `#/person/${ids.xiaoyu}?tab=fortune`);
+await page.waitForSelector('text=可能的性格特点');
+await page.getByText(/你改过生日/).scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollBy(0, -120));
+await page.waitForTimeout(300);
+await shot('07b-fortune-stale');
 
 // 喜好 Tab：猜测分组
 await page.getByRole('tab', { name: '喜好' }).click();

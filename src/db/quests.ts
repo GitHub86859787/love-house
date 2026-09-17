@@ -16,8 +16,16 @@ export async function syncQuests(today = new Date()): Promise<void> {
     const byKey = new Map(existing.map((q) => [q.ruleKey, q]));
     const now = Date.now();
 
+    // 里程碑任务：每人同时最多一条，做完再出下一条
+    const openMilestoneBy = new Set(existing.filter((q) => q.kind === 'milestone' && q.status === 'open').map((q) => q.personId));
+    const milestoneAddedBy = new Set<string>();
+
     for (const c of candidates) {
       if (byKey.has(c.ruleKey)) continue;
+      if (c.kind === 'milestone' && c.personId) {
+        if (openMilestoneBy.has(c.personId) || milestoneAddedBy.has(c.personId)) continue;
+        milestoneAddedBy.add(c.personId);
+      }
       await db.quests.add({
         id: uid(),
         type: c.kind === 'milestone' ? 'milestone' : c.kind === 'custom' ? 'custom' : c.kind === 'stale' || c.kind === 'birthday' || c.kind === 'holiday' ? 'reminder' : 'daily',

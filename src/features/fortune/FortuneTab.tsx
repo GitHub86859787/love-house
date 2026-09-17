@@ -5,7 +5,7 @@ import { db } from '@/db/db';
 import type { Person } from '@/db/types';
 import { buildChart } from '@/fortune/chart';
 import { fortuneData, markTrait } from '@/db/fortune';
-import { readingHash, synastryHash } from '@/fortune/api';
+import { readingStaleReason, synastryStaleReason } from '@/fortune/api';
 import { FORTUNE_TELLER } from '@/config/fortune-prompt';
 import { fortuneTellerAvatar } from '@/features/fortune/teller';
 import { Avatar } from '@/pixel/avatar/Avatar';
@@ -24,9 +24,9 @@ export function FortuneTab({ person }: { person: Person }) {
   const chart = buildChart(person.birth);
   const data = fortuneData(person);
   const reading = data?.reading.dialogue.length ? data.reading : null;
-  const stale = reading && person.fortune?.inputHash !== readingHash(person);
+  const staleReason = reading ? readingStaleReason(person) : null;
   const syn = data?.synastry;
-  const synStale = syn && me && syn.inputHash !== synastryHash(me, person);
+  const synStaleReason = syn && me ? synastryStaleReason(me, person, syn.inputHash, syn.basis) : null;
   const verdicts = reading?.traitVerdicts ?? [];
 
   const header = (
@@ -67,12 +67,20 @@ export function FortuneTab({ person }: { person: Person }) {
   return (
     <div className={styles.wrap}>
       {header}
-      <div className={`${styles.scroll} px-corner`}>
+      {staleReason && (
+        <div className={`${styles.staleBanner} px-corner-sm`}>
+          <span style={{ flex: 1 }}>⚠ {staleReason}</span>
+          <Button size="small" variant="primary" onClick={() => nav(`/fortune?person=${person.id}`)}>
+            重新问{FORTUNE_TELLER.name}
+          </Button>
+        </div>
+      )}
+      <div className={`${styles.scroll} px-corner`} style={staleReason ? { opacity: 0.75 } : undefined}>
         <div className={styles.scrollTop} />
         <ChartSummaryRow chart={chart} />
         <div className={styles.meta}>
           {FORTUNE_TELLER.name}说于 {formatDate(person.fortune!.createdAt)}
-          {stale && ' · 生辰或关系有变，可以再问一次'}
+          {staleReason && ' · 已过期'}
         </div>
         <div className={styles.dialogue}>
           {reading.dialogue.map((l, i) => (
@@ -129,9 +137,17 @@ export function FortuneTab({ person }: { person: Person }) {
 
       {syn && (
         <div className={`${styles.scroll} px-corner`} style={{ borderColor: '#d95d78' }}>
+          {synStaleReason && (
+            <div className={`${styles.staleBanner} px-corner-sm`}>
+              <span style={{ flex: 1 }}>⚠ {synStaleReason}</span>
+              <Button size="small" variant="primary" onClick={() => nav(`/fortune?person=${person.id}&mode=pair`)}>
+                重新合盘
+              </Button>
+            </div>
+          )}
           <div className={styles.sectionTitle} style={{ color: '#d95d78' }}>
             你们俩 · {FORTUNE_TELLER.name}说于 {formatDate(syn.createdAt)}
-            {synStale && ' · 生辰有变'}
+            {synStaleReason && ' · 已过期'}
           </div>
           <p className={styles.summary}>{syn.data.summary}</p>
           <div className={styles.dialogue}>

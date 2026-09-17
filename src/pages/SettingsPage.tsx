@@ -76,7 +76,7 @@ export function SettingsPage() {
 
   return (
     <Page>
-      <PageHeader title="设置" />
+      <PageHeader title="设置" subtitle={`人情村 v${__APP_VERSION__} · 数据只在本机`} />
 
       <Panel title="我的档案" tight>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 4 }}>

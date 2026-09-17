@@ -26,9 +26,39 @@ export function synastryHash(me: Person, other: Person): string {
 
 export const COOLDOWN_MS = 24 * 3600 * 1000;
 
+/** 冷却：只在"排盘没变"时生效；改过生日 / 关系后旧解读已过期，可以立刻重问 */
 export function cooldownLeft(person: Person, now = Date.now()): number {
-  const last = person.fortune?.lastAskedAt ?? 0;
+  if (!person.fortune) return 0;
+  if (person.fortune.inputHash !== readingHash(person)) return 0;
+  const last = person.fortune.lastAskedAt ?? 0;
   return Math.max(0, last + COOLDOWN_MS - now);
+}
+
+export function currentBasis(person: Person): { birth: string; relation: string; promptVersion: number } {
+  return { birth: JSON.stringify(person.birth ?? null), relation: person.relation, promptVersion: FORTUNE_PROMPT_VERSION };
+}
+
+/** 解读为什么过期了；null 表示还是最新的 */
+export function readingStaleReason(person: Person): string | null {
+  const f = person.fortune;
+  if (!f) return null;
+  if (f.inputHash === readingHash(person)) return null;
+  const now = currentBasis(person);
+  if (f.basis) {
+    if (f.basis.birth !== now.birth) return '你改过生日，这份解读是按旧生日算的，可能不准了';
+    if (f.basis.relation !== now.relation) return '关系类型变了，这份解读可能对不上了';
+    if (f.basis.promptVersion !== now.promptVersion) return '星婆婆的说法更新了，可以再问一次';
+  }
+  return '生辰或关系有变，这份解读可能不准了';
+}
+
+export function synastryStaleReason(me: Person, other: Person, synInputHash: string, basis?: { meBirth: string; otherBirth: string }): string | null {
+  if (synInputHash === synastryHash(me, other)) return null;
+  if (basis) {
+    if (basis.meBirth !== JSON.stringify(me.birth ?? null)) return '你改过自己的生日，这份合盘可能不准了';
+    if (basis.otherBirth !== JSON.stringify(other.birth ?? null)) return '你改过 TA 的生日，这份合盘可能不准了';
+  }
+  return '生辰或关系有变，这份合盘可能不准了';
 }
 
 export function readingInput(person: Person, chart: Chart): string {

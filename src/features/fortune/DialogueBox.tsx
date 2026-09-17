@@ -52,20 +52,23 @@ export function DialogueBox({ speaker, lines, onDone, resetKey }: Props) {
 
   if (showAll) {
     return (
-      <div className={`${styles.box} px-corner`} style={{ cursor: 'default', userSelect: 'text' }}>
+      <div className={styles.wrap}>
         <span className={`${styles.speaker} px-corner-sm`}>{speaker}</span>
-        <div className={styles.text} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {lines.map((l, i) => (
-            <p key={i}>{l}</p>
-          ))}
+        <div className={`${styles.box} px-corner`} style={{ cursor: 'default', userSelect: 'text' }}>
+          <div className={styles.text} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {lines.map((l, i) => (
+              <p key={i}>{l}</p>
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`${styles.box} px-corner`} onClick={tap} role="button">
+    <div className={styles.wrap}>
       <span className={`${styles.speaker} px-corner-sm`}>{speaker}</span>
+    <div className={`${styles.box} px-corner`} onClick={tap} role="button">
       <div className={styles.text}>
         {line.slice(0, shown)}
         {shown < line.length && <span className={styles.cursor} />}
@@ -89,6 +92,7 @@ export function DialogueBox({ speaker, lines, onDone, resetKey }: Props) {
         )}
       </span>
       {shown >= line.length && <span className={styles.next}>{done ? '■' : '▼'}</span>}
+    </div>
     </div>
   );
 }

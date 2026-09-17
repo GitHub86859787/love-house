@@ -17,7 +17,7 @@ import { DialogueBox } from '@/features/fortune/DialogueBox';
 import { useAi } from '@/features/ai/useAi';
 import { friendlyError } from '@/ai/client';
 import { buildChart } from '@/fortune/chart';
-import { cooldownLeft, estimateReadingTokens, estimateSynastryTokens, readingHash, requestReading, requestSynastry, synastryHash } from '@/fortune/api';
+import { cooldownLeft, estimateReadingTokens, estimateSynastryTokens, readingHash, readingStaleReason, requestReading, requestSynastry, synastryHash } from '@/fortune/api';
 import { fortuneData, fortuneStats, saveReading, saveSynastry } from '@/db/fortune';
 import { play } from '@/audio/sound';
 import styles from './FortunePage.module.css';
@@ -103,7 +103,7 @@ export function FortunePage() {
       say([`把你和 ${selected.nickname || selected.name} 放在一起瞧瞧……`, '（星婆婆把两张纸并排摆在桌上）']);
       try {
         const syn = await requestSynastry(me, selected, ai.model);
-        await saveSynastry(selected, syn, hash);
+        await saveSynastry(selected, syn, hash, me);
         play('milestone');
         say(syn.dialogue);
       } catch (e) {
@@ -122,7 +122,7 @@ export function FortunePage() {
 
   return (
     <Page>
-      <PageHeader title="占卜屋" left={<Button variant="ghost" iconName="back" aria-label="返回" onClick={() => nav('/')} />} />
+      <PageHeader title="占卜屋" subtitle={`${FORTUNE_TELLER.name} · 看星星也种地`} left={<Button variant="ghost" iconName="back" aria-label="返回" onClick={() => nav('/')} />} />
 
       <div className={`${styles.room} px-corner`}>
         {[
@@ -195,11 +195,12 @@ export function FortunePage() {
                 {level > 0 && level < 3 && <div>补充{level === 1 ? '出生年份' : '时辰'}可以看到更多。</div>}
                 {!hasCache && level > 0 && ai.available && <div>这次大约会用掉 {tokens} 个 token。</div>}
                 {hasCache && <div>已经看过，直接翻给你看，不花钱。</div>}
+                {mode === 'self' && !hasCache && selected.fortune && readingStaleReason(selected) && <div style={{ color: 'var(--danger)' }}>{readingStaleReason(selected)}。重新问不受冷却限制。</div>}
               </div>
             </Inset>
             <div style={{ display: 'flex', gap: 8 }}>
               <Button block variant="primary" disabled={busy || level === 0} onClick={ask}>
-                {busy ? '星婆婆在看……' : hasCache ? '再说一遍' : mode === 'self' ? '请星婆婆看看' : '请星婆婆看你们俩'}
+                {busy ? '星婆婆在看……' : hasCache ? '再说一遍' : mode === 'self' ? (selected.fortune && readingStaleReason(selected) ? '重新问星婆婆' : '请星婆婆看看') : '请星婆婆看你们俩'}
               </Button>
               {hasCache && mode === 'self' && (
                 <Button

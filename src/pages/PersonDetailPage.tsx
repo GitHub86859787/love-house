@@ -107,6 +107,7 @@ export function PersonDetailPage() {
     <Page>
       <PageHeader
         title={person.isMe ? '我的档案' : person.name}
+        subtitle={person.isMe ? '村里唯一一份关于你自己的档案' : `${RELATIONS[person.relation].label} · ${person.lastInteractionAt ? `上次互动 ${formatRelative(person.lastInteractionAt)}` : '还没有互动记录'}`}
         left={<Button variant="ghost" iconName="back" aria-label="返回" onClick={() => nav('/')} />}
         right={<Button variant="ghost" iconName="edit" aria-label="编辑" onClick={() => nav(`/person/${person.id}/edit`)} />}
       />

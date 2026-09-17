@@ -6,6 +6,7 @@ import { icon, type IconName } from '@/pixel/sprites/icons';
 import { runDecayIfNeeded } from '@/features/scoring/runtime';
 import { useSettings } from '@/db/settings';
 import { setSoundEnabled } from '@/audio/sound';
+import { ToastLine } from '@/ui/Toast';
 
 const NAV_LEFT: { to: string; label: string; icon: IconName }[] = [
   { to: '/', label: '村口', icon: 'village' },
@@ -67,12 +68,21 @@ export function Page({ children }: { children: React.ReactNode }) {
   return <main className={styles.page}>{children}</main>;
 }
 
-export function PageHeader({ title, left, right }: { title: string; left?: React.ReactNode; right?: React.ReactNode }) {
+/**
+ * 页面顶栏：吸顶。标题行下面固定留一行"状态行"，平时显示页面副标题，
+ * 有提示（成就解锁等）时显示提示——这样提示永远不会盖住任何可点的东西。
+ */
+export function PageHeader({ title, left, right, subtitle }: { title: string; left?: React.ReactNode; right?: React.ReactNode; subtitle?: React.ReactNode }) {
   return (
     <header className={styles.header}>
-      {left}
-      <h1>{title}</h1>
-      {right}
+      <div className={styles.headerRow}>
+        {left}
+        <h1>{title}</h1>
+        {right}
+      </div>
+      <div className={styles.statusLine}>
+        <ToastLine fallback={subtitle} />
+      </div>
     </header>
   );
 }

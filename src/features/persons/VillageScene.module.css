@@ -178,10 +178,22 @@
   color: var(--wood-dark);
 }
 
+.tentSlot {
+  width: 128px;
+}
+
 .tent {
   position: absolute;
+  left: 24px;
+  top: 56px;
+}
+
+/* 星婆婆站在帐篷门口，和帐篷是一个入口 */
+.tentTeller {
+  position: absolute;
   left: 40px;
-  top: 24px;
+  bottom: 36px;
+  animation: idle-bob 1600ms steps(2) infinite;
 }
 
 .entering {

@@ -2,6 +2,7 @@ import { db } from './db';
 import type { FortuneCache, Person, Preference } from './types';
 import { uid } from '@/lib/id';
 import type { FortuneData, Reading, Synastry } from '@/fortune/schemas';
+import { currentBasis } from '@/fortune/api';
 
 export function fortuneData(p: Person): FortuneData | null {
   return (p.fortune?.data as FortuneData | undefined) ?? null;
@@ -20,6 +21,7 @@ export async function saveReading(person: Person, reading: Reading, inputHash: s
     .map((g) => ({ id: uid(), name: g.name, category: g.category, tier: g.tier, note: g.basis, source: 'fortune', createdAt: now }));
   const fortune: FortuneCache = {
     inputHash,
+    basis: currentBasis(person),
     createdAt: now,
     data,
     rejected: prev?.rejected ?? [],
@@ -33,12 +35,13 @@ export async function saveReading(person: Person, reading: Reading, inputHash: s
   await db.persons.update(person.id, { fortune, preferences: [...kept, ...guesses], updatedAt: now });
 }
 
-export async function saveSynastry(person: Person, synastry: Synastry, inputHash: string): Promise<void> {
+export async function saveSynastry(person: Person, synastry: Synastry, inputHash: string, me?: Person): Promise<void> {
   const now = Date.now();
   const data = (fortuneData(person) ?? { reading: { dialogue: [], traits: [], guessedLikes: [], tips: [], topics: [], systems: { zodiac: null, numerology: null, bazi: null } }, likesWritten: false }) as FortuneData;
-  data.synastry = { data: synastry, inputHash, createdAt: now };
+  data.synastry = { data: synastry, inputHash, createdAt: now, basis: me ? { meBirth: JSON.stringify(me.birth ?? null), otherBirth: JSON.stringify(person.birth ?? null) } : undefined };
   const fortune: FortuneCache = {
     inputHash: person.fortune?.inputHash ?? '',
+    basis: person.fortune?.basis,
     createdAt: person.fortune?.createdAt ?? now,
     data,
     rejected: person.fortune?.rejected ?? [],

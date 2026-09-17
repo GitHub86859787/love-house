@@ -115,3 +115,14 @@
   color: var(--ink-soft);
   text-align: center;
 }
+
+.staleBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #f7d9d9;
+  border: 2px solid var(--danger);
+  color: var(--danger);
+  font-size: var(--fs-sm);
+}
