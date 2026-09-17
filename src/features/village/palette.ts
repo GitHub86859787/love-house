@@ -28,7 +28,7 @@ const C = {
   plaster: { dark: '#b9a99c', base: '#e6d9c6', light: '#f6eddc' },
   tile: { dark: '#2f4a52', base: '#4a6f78', light: '#7a9ea4' },
   grass: { dark: '#3f7f3c', base: '#63a83e', light: '#94cc52' },
-  autumn: { dark: '#94682a', base: '#c99a3e', light: '#e6c46a' },
+  autumn: { dark: '#86752c', base: '#b8a040', light: '#d9c868' },
   snow: { dark: '#a8b8d0', base: '#d6e2ee', light: '#f1f5f8' },
   water: { dark: '#2c5d94', base: '#3f8fcf', light: '#7ec8ee' },
   mist: { dark: '#66739f', base: '#8f9dbf', light: '#c0c3dc' },

@@ -10,12 +10,14 @@ import { gridToDataURL } from '@/pixel/render';
 import { currentSeason, type Season } from '@/lib/season';
 import { FAMILIES, SEASON_RAMPS } from '../palette';
 import { groundDemo, groundSheet } from '../sprites/ground';
+import { WATER_FRAMES, waterAnimStrip, waterDemo, waterSheet } from '../sprites/water';
 import styles from './PreviewPage.module.css';
 
-type Tab = 'palette' | 'ground';
+type Tab = 'palette' | 'ground' | 'water';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'palette', label: '色卡' },
   { key: 'ground', label: '1 地面' },
+  { key: 'water', label: '2 水系' },
 ];
 const SEASONS: { key: Season; label: string }[] = [
   { key: 'spring', label: '春' },
@@ -39,6 +41,14 @@ export function PreviewPage() {
   const [tab, setTab] = useState<Tab>((params.get('tab') as Tab) || 'palette');
   const [season, setSeason] = useState<Season | 'auto'>((params.get('season') as Season) || 'auto');
   const [scale, setScale] = useState<Scale>(params.get('scale') === '1' ? 1 : 3);
+  const [frame, setFrame] = useState(Number(params.get('frame') ?? 0));
+  const [animate, setAnimate] = useState(params.get('anim') !== '0');
+  // 8 fps 逻辑帧：水面三帧循环
+  useEffect(() => {
+    if (!animate) return;
+    const t = window.setInterval(() => setFrame((f) => (f + 1) % WATER_FRAMES), 250);
+    return () => window.clearInterval(t);
+  }, [animate]);
   const s: Season = season === 'auto' ? currentSeason() : season;
   // 截图模式：隐藏顶栏 / 底栏，页面不限宽，让 3× 图块表完整露出来
   const shot = params.get('shot') === '1';
@@ -77,6 +87,7 @@ export function PreviewPage() {
         <Tabs tabs={TABS} value={tab} onChange={setTab} />
         {tab === 'palette' && <PaletteCard season={s} />}
         {tab === 'ground' && <GroundSheet season={s} scale={scale} />}
+        {tab === 'water' && <WaterSheet season={s} scale={scale} frame={frame} animate={animate} onToggle={() => setAnimate((a) => !a)} />}
       </Panel>
     </Page>
   );
@@ -146,6 +157,41 @@ function GroundSheet({ season, scale }: { season: Season; scale: Scale }) {
       </p>
       <div className={styles.demo}>
         <Px grid={demo} scale={scale} title={`${scale}×`} />
+      </div>
+      <p className={styles.note}>图块表</p>
+      <div className={scale === 1 ? styles.gridSmall : styles.grid}>
+        {items.map((it) => (
+          <div key={it.name} className={styles.item}>
+            <div className={styles.pair}>
+              <Px grid={it.grid} scale={scale} />
+            </div>
+            <div className={styles.itemName}>{it.name}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function WaterSheet({ season, scale, frame, animate, onToggle }: { season: Season; scale: Scale; frame: number; animate: boolean; onToggle: () => void }) {
+  const items = useMemo(() => waterSheet(season, frame), [season, frame]);
+  const demo = useMemo(() => waterDemo(season, frame), [season, frame]);
+  const strip = useMemo(() => waterAnimStrip(season), [season]);
+  const label = SEASONS.find((x) => x.key === season)?.label;
+  return (
+    <div className={styles.sheet} data-shot="sheet">
+      <p className={styles.note}>
+        水系 · {label} · {scale}× · 帧 {frame + 1}/{WATER_FRAMES}{' '}
+        <Button size="small" variant="ghost" onClick={onToggle}>
+          {animate ? '停' : '动'}
+        </Button>
+      </p>
+      <div className={styles.demo}>
+        <Px grid={demo} scale={scale} title={`${scale}×`} />
+      </div>
+      <p className={styles.note}>三帧分解（浪花与波纹右移、暗纹反向、鸭子与船起伏）</p>
+      <div className={styles.demo} data-shot="anim">
+        <Px grid={strip} scale={scale} />
       </div>
       <p className={styles.note}>图块表</p>
       <div className={scale === 1 ? styles.gridSmall : styles.grid}>

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Grid } from '@/pixel/painter';
 import { ALL_COLORS, COLOR_SET, FAMILIES } from './palette';
 import { demoLayout, groundDemo, groundSheet, jaggedProfile } from './sprites/ground';
+import { waterAnimStrip, waterDemo, waterSheet } from './sprites/water';
 import { hash2, TILE } from './sprites/tile';
 
 function colorsOf(g: Grid): Set<string> {
@@ -105,5 +106,26 @@ describe('地面图块密度与交界', () => {
       }
       expect(straight, `${season} 横路上边有直线段`).toBe(0);
     }
+  });
+});
+
+describe('水系图块只用调色板颜色，且有密度', () => {
+  for (const season of ['spring', 'summer', 'autumn', 'winter'] as const) {
+    it(`${season}`, () => {
+      const grids = [...waterSheet(season, 0).map((i) => i.grid), waterDemo(season, 1), waterAnimStrip(season)];
+      for (const g of grids) for (const c of colorsOf(g)) expect(COLOR_SET.has(c)).toBe(true);
+      // 水中块也要有 15% 非基色
+      const mid = waterSheet(season, 0)[0].grid;
+      const counts = new Map<string, number>();
+      for (const c of mid.data) if (c) counts.set(c, (counts.get(c) ?? 0) + 1);
+      expect(1 - Math.max(...counts.values()) / 256).toBeGreaterThanOrEqual(0.15);
+    });
+  }
+  it('三帧互不相同', () => {
+    const a = waterDemo('spring', 0).key();
+    const b = waterDemo('spring', 1).key();
+    const c = waterDemo('spring', 2).key();
+    expect(a).not.toBe(b);
+    expect(b).not.toBe(c);
   });
 });

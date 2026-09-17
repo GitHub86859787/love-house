@@ -13,14 +13,14 @@ import { ramp, SEASON_RAMPS, type Ramp } from '../palette';
 import { hash2, TILE } from './tile';
 
 /* ------------------------------ 工具 ------------------------------ */
-type Rng = () => number;
+export type Rng = () => number;
 /** 同一格同一用途每次画出来一样 */
-function makeRng(x: number, y: number, salt: number): Rng {
+export function makeRng(x: number, y: number, salt: number): Rng {
   let i = 0;
   return () => hash2(x, y, salt * 1000 + i++);
 }
-const pick = <T,>(rnd: Rng, arr: T[]): T => arr[Math.floor(rnd() * arr.length)];
-const irange = (rnd: Rng, lo: number, hi: number) => lo + Math.floor(rnd() * (hi - lo + 1));
+export const pick = <T,>(rnd: Rng, arr: T[]): T => arr[Math.floor(rnd() * arr.length)];
+export const irange = (rnd: Rng, lo: number, hi: number) => lo + Math.floor(rnd() * (hi - lo + 1));
 
 /** 非基色像素数不够就补散点，直到达到 min（验收：≥ 15% ≈ 39 px） */
 function ensureDensity(g: Grid, base: string, min: number, rnd: Rng, colors: string[]) {
@@ -87,12 +87,11 @@ function grassBase(season: Season, variant: GrassVariant, x: number, y: number):
       }
     }
     if (variant === 'flowers') {
-      // 雪里的小石子
-      const s = ramp('stone');
+      // 雪里露出的一小块土
+      const e = ramp('earth');
       const sx = irange(rnd, 2, TILE - 4);
       const sy = irange(rnd, 2, TILE - 3);
-      g.rect(sx, sy, 2, 1, s.base);
-      g.set(sx + 1, sy + 1, s.dark);
+      g.rect(sx, sy, 2, 1, e.dark);
     }
     ensureDensity(g, r.base, 40, rnd, [r.dark, r.dark, r.light]);
     return g;
@@ -131,10 +130,7 @@ function grassBase(season: Season, variant: GrassVariant, x: number, y: number):
       g.set(fx + 1, fy, flowerSide);
       g.set(fx, fy + 1, r.dark);
     }
-    const sx = irange(rnd, 1, TILE - 4);
-    const sy = irange(rnd, 1, TILE - 3);
-    g.rect(sx, sy, 2, 1, s.base);
-    g.set(sx + 1, sy + 1, s.dark);
+    void s;
   }
   ensureDensity(g, r.base, 40, rnd, [r.dark, r.dark, r.dark, r.light]);
   return g;
@@ -195,7 +191,7 @@ function edgeProfile(x: number, y: number, side: 'n' | 's' | 'w' | 'e'): number[
   return gen(x, y, prev[TILE - 1]);
 }
 
-function pathMask(edges: Edges, corners: Corners, rnd: Rng, x: number, y: number): boolean[][] {
+export function walkMask(edges: Edges, corners: Corners, rnd: Rng, x: number, y: number): boolean[][] {
   const m: boolean[][] = Array.from({ length: TILE }, () => Array<boolean>(TILE).fill(true));
   const n = edges.n ? edgeProfile(x, y, 'n') : null;
   const s = edges.s ? edgeProfile(x, y, 's') : null;
@@ -241,7 +237,7 @@ export function pathTile(season: Season, edges: Edges, x = 0, y = 0, corners: Co
   const gr = SEASON_RAMPS[season].grass;
   const st = ramp('stone');
   const rnd = makeRng(x, y, 200);
-  const mask = pathMask(edges, corners, rnd, x, y);
+  const mask = walkMask(edges, corners, rnd, x, y);
   const isPath = (px: number, py: number): boolean => {
     if (px >= 0 && px < TILE && py >= 0 && py < TILE) return mask[py][px];
     // 格外：接草的那一侧算草，其他方向算路
@@ -291,16 +287,15 @@ export function pathTile(season: Season, edges: Edges, x = 0, y = 0, corners: Co
     const [px, py] = pick(rnd, interior);
     if (g.get(px, py) === r.base) g.set(px, py, rnd() < 0.6 ? r.dark : r.light);
   }
-  // 碎石 1–2：石色 2×1 + 右下一点石暗
-  const stones = irange(rnd, 1, 2);
-  for (let k = 0; k < stones && interior.length; k++) {
+  // 碎石：每格最多 1 处，土暗 2×1（不用石色，3× 下不会成蓝点）
+  if (interior.length && rnd() < 0.7) {
     const [px, py] = pick(rnd, interior);
-    if (px + 1 < TILE && mask[py][px + 1] && py + 1 < TILE) {
-      g.set(px, py, st.base);
-      g.set(px + 1, py, st.base);
-      if (mask[py + 1][px + 1]) g.set(px + 1, py + 1, st.dark);
+    if (px + 1 < TILE && mask[py][px + 1]) {
+      g.set(px, py, r.dark);
+      g.set(px + 1, py, r.dark);
     }
   }
+  void st;
   // 密度兜底：路面像素里非基色 ≥ 15%
   const pathPixels = g.data.filter((c) => c).length;
   ensureDensity(g, r.base, Math.ceil(pathPixels * 0.16), rnd, [r.dark, r.dark, r.light]);
@@ -318,11 +313,11 @@ export function dirtTile(x = 0, y = 0): Grid {
   const fy = irange(rnd, 1, 9);
   g.rect(fx, fy, 2, 3, r.dark);
   g.rect(fx + 3, fy + 2, 2, 3, r.dark);
-  // 碎石
+  // 碎石：土暗 2×1 一处
   const sx = irange(rnd, 1, TILE - 4);
   const sy = irange(rnd, 1, TILE - 3);
-  g.rect(sx, sy, 2, 1, st.base);
-  g.set(sx + 1, sy + 1, st.dark);
+  g.rect(sx, sy, 2, 1, r.dark);
+  void st;
   // 颗粒
   for (let k = 0; k < 9; k++) g.set(irange(rnd, 0, TILE - 1), irange(rnd, 0, TILE - 1), rnd() < 0.65 ? r.dark : r.light);
   ensureDensity(g, r.base, 40, rnd, [r.dark, r.dark, r.light]);
@@ -334,6 +329,7 @@ export function dirtTile(x = 0, y = 0): Grid {
  * 石板：8×8 一块横向错缝；缝里点青苔（春夏草暗 / 秋冬土暗）；每块左上 1 px 亮、右下 1 px 暗；偶有缺角板。
  */
 export function stoneTile(season: Season, x = 0, y = 0): Grid {
+  // 注意：石板本身是石色，这是它该有的颜色
   const r = ramp('stone');
   const moss = season === 'spring' || season === 'summer' ? ramp('grass').dark : ramp('earth').dark;
   const rnd = makeRng(x, y, 400);
@@ -439,7 +435,7 @@ export interface SheetItem {
 
 export function groundSheet(season: Season): SheetItem[] {
   const items: SheetItem[] = [];
-  const names: Record<GrassVariant, string> = { normal: '草 普通', dense: '草 暗块多', sparse: '草 稀疏', flowers: season === 'winter' ? '雪 小石' : '草 小花' };
+  const names: Record<GrassVariant, string> = { normal: '草 普通', dense: '草 暗块多', sparse: '草 稀疏', flowers: season === 'winter' ? '雪 露土' : '草 小花' };
   GRASS_VARIANTS.forEach((v) => items.push({ name: names[v], grid: grassTile(season, v, 2, 3) }));
   const E = (n: boolean, s: boolean, e: boolean, w: boolean): Edges => ({ n, s, e, w });
   const P = (name: string, edges: Edges, corners?: Corners, salt = 0) => items.push({ name, grid: pathTile(season, edges, 3 + salt, 3, corners) });

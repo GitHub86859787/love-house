@@ -14,12 +14,13 @@ const shotEl = async (sel, file) => {
 };
 await page.goto(`${BASE}#/preview?tab=palette&shot=1`);
 await shotEl('[data-shot="palette"]', `art-palette.png`);
-await page.goto(`${BASE}#/preview?tab=${cat}&season=spring&scale=1&shot=1`);
+await page.goto(`${BASE}#/preview?tab=${cat}&season=spring&scale=1&shot=1&anim=0`);
 await page.reload();
 await shotEl('[data-shot="sheet"]', `art-${cat}-1x.png`);
 for (const s of ['spring', 'summer', 'autumn', 'winter']) {
-  await page.goto(`${BASE}#/preview?tab=${cat}&season=${s}&scale=3&shot=1`);
+  await page.goto(`${BASE}#/preview?tab=${cat}&season=${s}&scale=3&shot=1&anim=0`);
   await page.reload();
   await shotEl('[data-shot="sheet"]', `art-${cat}-3x-${s}.png`);
+  if (s === 'spring' && (await page.locator('[data-shot="anim"]').count())) await shotEl('[data-shot="anim"]', `art-${cat}-anim.png`);
 }
 await browser.close();
