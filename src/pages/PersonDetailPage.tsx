@@ -2,24 +2,28 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/db';
-import { deletePerson, updatePerson } from '@/db/persons';
+import { deletePerson } from '@/db/persons';
+import { adjustAffection, setAffection } from '@/db/interactions';
 import type { Note } from '@/db/types';
+import { updatePerson } from '@/db/persons';
 import { RELATIONS } from '@/config/relations';
 import { MILESTONES } from '@/config/milestones';
-import { TIER_ORDER, TIERS } from '@/config/reactions';
+import { SCORING } from '@/config/scoring';
 import { Page, PageHeader } from '@/app/Layout';
-import { Panel, Inset } from '@/ui/Panel';
+import { Panel } from '@/ui/Panel';
 import { Button } from '@/ui/Button';
 import { HeartBar, heartsOf } from '@/ui/HeartBar';
 import { Tabs } from '@/ui/Tabs';
 import { Modal } from '@/ui/Modal';
-import { Chip, Chips, Textarea } from '@/ui/Field';
+import { Chip, Chips, Input, Textarea } from '@/ui/Field';
 import { useToast } from '@/ui/Toast';
 import { Avatar } from '@/pixel/avatar/Avatar';
 import { isGhost } from '@/features/persons/VillageScene';
-import { SCORING } from '@/config/scoring';
+import { PreferencesTab } from '@/features/preferences/PreferencesTab';
+import { TimelineTab } from '@/features/interactions/TimelineTab';
 import { uid } from '@/lib/id';
 import { formatDateTime, formatRelative } from '@/lib/date';
+import { formatBirth } from '@/lib/birthday';
 import styles from './PersonDetailPage.module.css';
 
 type Tab = 'prefs' | 'notes' | 'timeline' | 'milestones';
@@ -38,6 +42,9 @@ export function PersonDetailPage() {
   const person = useLiveQuery(() => db.persons.get(id), [id]);
   const [tab, setTab] = useState<Tab>('prefs');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteName, setDeleteName] = useState('');
+  const [adjustOpen, setAdjustOpen] = useState(false);
+  const [pointsDraft, setPointsDraft] = useState('');
   const [noteDraft, setNoteDraft] = useState('');
 
   if (person === undefined) {
@@ -58,7 +65,6 @@ export function PersonDetailPage() {
   const hearts = heartsOf(person.affection);
   const golden = hearts >= SCORING.maxHearts;
   const ghost = isGhost(person);
-  const birthdayText = person.birthday ? `${person.birthday.month} 月 ${person.birthday.day} 日${person.birthday.year ? ` · ${person.birthday.year} 年` : ''}` : '未知';
 
   const addNote = async () => {
     const text = noteDraft.trim();
@@ -74,9 +80,17 @@ export function PersonDetailPage() {
   };
 
   const doDelete = async () => {
+    if (deleteName.trim() !== person.name) return;
     await deletePerson(person.id);
     toast(`${person.name} 搬走了`);
     nav('/', { replace: true });
+  };
+
+  const applyPoints = async () => {
+    const n = Number(pointsDraft);
+    if (!Number.isFinite(n)) return;
+    await setAffection(person.id, n);
+    setAdjustOpen(false);
   };
 
   return (
@@ -87,7 +101,7 @@ export function PersonDetailPage() {
         right={<Button variant="ghost" iconName="edit" aria-label="编辑" onClick={() => nav(`/person/${person.id}/edit`)} />}
       />
 
-      <Panel golden={golden}>
+      <Panel golden={golden} title={golden ? '挚友殿堂' : undefined}>
         <div className={styles.hero}>
           <div className={`${styles.avatarBox} px-corner`}>
             <Avatar config={person.avatar} scale={4} ghost={ghost} />
@@ -99,14 +113,22 @@ export function PersonDetailPage() {
               <span className={`${styles.relation} px-corner-sm`}>{RELATIONS[person.relation].label}</span>
             </div>
             <div className={styles.meta}>
-              <span>生日：{birthdayText}</span>
+              <span>生日：{person.birth ? formatBirth(person.birth) : '未知'}</span>
               {person.metOn && <span>认识于 {person.metOn}</span>}
               <span>{person.lastInteractionAt ? `上次互动 ${formatRelative(person.lastInteractionAt)}` : '还没有互动记录'}</span>
             </div>
           </div>
         </div>
-        <div className={styles.heartsRow}>
+        <div className={styles.heartsRow} onClick={() => { setPointsDraft(String(person.affection)); setAdjustOpen(true); }} role="button" aria-label="调整好感度">
           <HeartBar points={person.affection} scale={2} showText />
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <Button size="small" variant="ghost" iconName="minus" aria-label="减一颗心" onClick={() => adjustAffection(person.id, -SCORING.manualHeartStep)} />
+          <Button size="small" variant="ghost" iconName="plus" aria-label="加一颗心" onClick={() => adjustAffection(person.id, SCORING.manualHeartStep)} />
+          <span style={{ flex: 1 }} />
+          <Button size="small" variant="primary" iconName="edit" onClick={() => nav(`/record?person=${person.id}`)}>
+            记一笔
+          </Button>
         </div>
         {person.tags.length > 0 && (
           <div style={{ marginTop: 12 }}>
@@ -134,32 +156,7 @@ export function PersonDetailPage() {
       <Panel tight>
         <Tabs tabs={TABS} value={tab} onChange={setTab} />
 
-        {tab === 'prefs' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {TIER_ORDER.map((tier) => {
-              const items = person.preferences.filter((p) => p.tier === tier);
-              return (
-                <Inset key={tier}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--fs-sm)', color: TIERS[tier].color }}>
-                    <span>{TIERS[tier].icon}</span>
-                    <span>{TIERS[tier].label}</span>
-                    <span style={{ color: 'var(--ink-soft)' }}>· {items.length}</span>
-                  </div>
-                  {items.length > 0 && (
-                    <div style={{ marginTop: 6 }}>
-                      <Chips>
-                        {items.map((p) => (
-                          <Chip key={p.id}>{p.name}</Chip>
-                        ))}
-                      </Chips>
-                    </div>
-                  )}
-                </Inset>
-              );
-            })}
-            <p className={styles.empty}>喜好的添加与送礼匹配将在阶段 2 开放</p>
-          </div>
-        )}
+        {tab === 'prefs' && <PreferencesTab person={person} />}
 
         {tab === 'notes' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -180,7 +177,7 @@ export function PersonDetailPage() {
           </div>
         )}
 
-        {tab === 'timeline' && <p className={styles.empty}>互动时间线将在阶段 2 开放</p>}
+        {tab === 'timeline' && <TimelineTab person={person} onRecord={() => nav(`/record?person=${person.id}`)} />}
 
         {tab === 'milestones' && (
           <div>
@@ -201,23 +198,35 @@ export function PersonDetailPage() {
                 </div>
               );
             })}
+            <p className={styles.empty}>里程碑事件卡与解锁任务将在阶段 3 开放</p>
           </div>
         )}
       </Panel>
 
-      <Button variant="danger" block iconName="trash" onClick={() => setConfirmDelete(true)}>
+      <Button variant="danger" block iconName="trash" onClick={() => { setDeleteName(''); setConfirmDelete(true); }}>
         让 TA 搬走（删除）
       </Button>
 
+      <Modal open={adjustOpen} title="调整好感度" onClose={() => setAdjustOpen(false)}>
+        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>每颗心 250 点，满 {SCORING.maxPoints} 点。直接填点数：</p>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Input type="number" inputMode="numeric" value={pointsDraft} onChange={(e) => setPointsDraft(e.target.value)} />
+          <Button variant="primary" onClick={applyPoints}>
+            设定
+          </Button>
+        </div>
+      </Modal>
+
       <Modal open={confirmDelete} title="确定删除？" onClose={() => setConfirmDelete(false)}>
         <p>
-          {person.name} 的资料、笔记和互动记录都会被删除，无法恢复。
+          {person.name} 的资料、笔记和互动记录都会被删除，无法恢复。输入 TA 的名字确认：
         </p>
+        <Input value={deleteName} onChange={(e) => setDeleteName(e.target.value)} placeholder={person.name} />
         <div style={{ display: 'flex', gap: 8 }}>
           <Button block variant="ghost" onClick={() => setConfirmDelete(false)}>
             取消
           </Button>
-          <Button block variant="danger" onClick={doDelete}>
+          <Button block variant="danger" onClick={doDelete} disabled={deleteName.trim() !== person.name}>
             删除
           </Button>
         </div>

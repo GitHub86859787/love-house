@@ -2,12 +2,14 @@ import type { AvatarConfig } from '@/db/types';
 import { Avatar } from '@/pixel/avatar/Avatar';
 import { PART_GROUPS, PART_KEYS, type PartKey } from '@/pixel/avatar/parts';
 import { randomAvatar } from '@/pixel/avatar/build';
+import type { RelationType } from '@/config/relations';
 import { Button } from '@/ui/Button';
 import styles from './AvatarEditor.module.css';
 
 interface Props {
   value: AvatarConfig;
   onChange: (next: AvatarConfig) => void;
+  relation?: RelationType;
 }
 
 const COLOR_KEY: Record<PartKey, keyof AvatarConfig> = {
@@ -16,13 +18,14 @@ const COLOR_KEY: Record<PartKey, keyof AvatarConfig> = {
   eyes: 'eyeColor',
   shirt: 'shirtColor',
   accessory: 'accessoryColor',
+  feature: 'featureColor',
 };
 
 /** 拼装式头像编辑器：每个部件左右切换形状 + 独立换色 */
-export function AvatarEditor({ value, onChange }: Props) {
+export function AvatarEditor({ value, onChange, relation = 'friend' }: Props) {
   const step = (key: PartKey, dir: 1 | -1) => {
     const n = PART_GROUPS[key].parts.length;
-    const cur = value[key] as number;
+    const cur = (value[key] as number | undefined) ?? 0;
     onChange({ ...value, [key]: (cur + dir + n) % n });
   };
   const setColor = (key: PartKey, color: string) => onChange({ ...value, [COLOR_KEY[key]]: color });
@@ -31,14 +34,14 @@ export function AvatarEditor({ value, onChange }: Props) {
     <div className={styles.editor}>
       <div className={`${styles.preview} px-corner-sm`}>
         <Avatar config={value} scale={5} />
-        <Button size="small" variant="ghost" onClick={() => onChange(randomAvatar())}>
+        <Button size="small" variant="ghost" onClick={() => onChange(randomAvatar(relation))}>
           随机一个
         </Button>
       </div>
       {PART_KEYS.map((key) => {
         const group = PART_GROUPS[key];
-        const idx = value[key] as number;
-        const color = value[COLOR_KEY[key]] as string;
+        const idx = (value[key] as number | undefined) ?? 0;
+        const color = (value[COLOR_KEY[key]] as string | undefined) ?? group.colors[0];
         return (
           <div key={key} className={styles.group}>
             <div className={styles.groupHead}>

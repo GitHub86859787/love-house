@@ -1,0 +1,122 @@
+.stage {
+  position: relative;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+.avatar {
+  position: relative;
+  z-index: 1;
+  animation: pop-in 240ms steps(4) both;
+}
+
+.avatarHit {
+  animation: heart-bounce 500ms steps(6) both;
+}
+
+.flyer {
+  position: absolute;
+  left: 24px;
+  bottom: 24px;
+  z-index: 2;
+  animation:
+    fly-x 700ms steps(14) forwards,
+    fly-y 700ms steps(14) forwards;
+}
+
+/* 抛物线：x 匀速，y 先上后下（用 cubic 曲线近似） */
+@keyframes fly-x {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(var(--fly-dx));
+  }
+}
+
+@keyframes fly-y {
+  0% {
+    bottom: 24px;
+  }
+  50% {
+    bottom: 140px;
+  }
+  100% {
+    bottom: var(--fly-end);
+  }
+}
+
+.flyerInner {
+  animation: spin 700ms steps(4) infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.points {
+  position: absolute;
+  left: 50%;
+  top: 24px;
+  transform: translateX(-50%);
+  font-size: var(--fs-xxl);
+  line-height: 40px;
+  color: var(--grass-dark);
+  text-shadow:
+    2px 2px 0 var(--white),
+    -2px 2px 0 var(--white),
+    2px -2px 0 var(--white),
+    -2px -2px 0 var(--white);
+  animation: rise 900ms steps(9) both;
+  z-index: 3;
+}
+
+.pointsNeg {
+  color: var(--danger);
+}
+
+.pointsZero {
+  color: var(--ink-soft);
+}
+
+@keyframes rise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 16px) scale(0.6);
+  }
+  30% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.2);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -8px) scale(1);
+  }
+}
+
+.particle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 2;
+  animation: burst 800ms steps(8) both;
+}
+
+@keyframes burst {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--px)), calc(-50% + var(--py))) scale(1);
+    opacity: 0;
+  }
+}

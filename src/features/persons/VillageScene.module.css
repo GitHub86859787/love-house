@@ -137,3 +137,18 @@
   padding: 0 24px;
   text-align: center;
 }
+
+/* 关系变更后一分钟内回到村口：屋顶闪一下 */
+.roofFlash {
+  animation: roof-flash 1200ms steps(6) 3;
+}
+
+@keyframes roof-flash {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.6) saturate(1.4);
+  }
+}

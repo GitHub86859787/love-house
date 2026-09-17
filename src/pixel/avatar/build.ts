@@ -1,6 +1,22 @@
 import { Grid } from '../painter';
 import type { AvatarConfig } from '@/db/types';
-import { ACCESSORIES, AVATAR_SIZE, EYES, FACES, HAIRS, INK, SHIRTS, HAIR_COLORS, SKIN_COLORS, EYE_COLORS, SHIRT_COLORS, ACCESSORY_COLORS } from './parts';
+import type { RelationType } from '@/config/relations';
+import {
+  ACCESSORIES,
+  AVATAR_SIZE,
+  EYES,
+  FACES,
+  FEATURES,
+  INK,
+  SHIRTS,
+  HAIRS,
+  HAIR_COLORS,
+  SKIN_COLORS,
+  EYE_COLORS,
+  SHIRT_COLORS,
+  ACCESSORY_COLORS,
+  FEATURE_COLORS,
+} from './parts';
 
 const cache = new Map<string, Grid>();
 
@@ -8,7 +24,7 @@ function pick<T>(arr: readonly T[], i: number): T {
   return arr[((i % arr.length) + arr.length) % arr.length];
 }
 
-/** 按配置拼装头像；顺序：上衣 → 脸 → 眼 → 头发 → 配饰 → 整体描边 */
+/** 按配置拼装头像；顺序：上衣 → 脸 → 眼 → 特征 → 头发 → 配饰 → 整体描边 */
 export function buildAvatar(cfg: AvatarConfig, ghost = false): Grid {
   const key = JSON.stringify(cfg) + (ghost ? ':ghost' : '');
   const hit = cache.get(key);
@@ -18,12 +34,12 @@ export function buildAvatar(cfg: AvatarConfig, ghost = false): Grid {
   pick(SHIRTS, cfg.shirt).draw(g, cfg.shirtColor);
   pick(FACES, cfg.face).draw(g, cfg.skinColor);
   pick(EYES, cfg.eyes).draw(g, cfg.eyeColor);
+  pick(FEATURES, cfg.feature ?? 0).draw(g, cfg.featureColor ?? FEATURE_COLORS[0]);
   pick(HAIRS, cfg.hair).draw(g, cfg.hairColor);
   pick(ACCESSORIES, cfg.accessory).draw(g, cfg.accessoryColor);
   g.outline(INK);
 
   if (ghost) {
-    // 久未联系：整体变灰
     for (let k = 0; k < g.data.length; k++) {
       const c = g.data[k];
       if (!c) continue;
@@ -41,24 +57,31 @@ export function buildAvatar(cfg: AvatarConfig, ghost = false): Grid {
   return g;
 }
 
-export function randomAvatar(seed = Math.random()): AvatarConfig {
+/** 随机头像；按关系类型倾向：家人偏年长（灰白发、皱纹、胡子概率高） */
+export function randomAvatar(relation: RelationType = 'friend', seed = Math.random()): AvatarConfig {
   let s = Math.floor(seed * 2 ** 31) || 1;
   const rnd = () => {
     s = (s * 48271) % 2147483647;
     return s / 2147483647;
   };
   const r = (n: number) => Math.floor(rnd() * n);
+  const elder = relation === 'family' ? rnd() < 0.6 : rnd() < 0.08;
+  const hairColor = elder ? (rnd() < 0.5 ? '#d9d9d9' : '#f4f1ea') : HAIR_COLORS[r(8)];
+  const feature = elder ? [1, 2, 3, 4][r(4)] : rnd() < 0.25 ? [2, 5, 6][r(3)] : 0;
+  const featureColor = feature === 1 ? '#a86d43' : elder ? '#8a8a8a' : FEATURE_COLORS[r(3)];
   return {
     face: r(FACES.length),
     skinColor: SKIN_COLORS[r(SKIN_COLORS.length)],
     hair: r(HAIRS.length),
-    hairColor: HAIR_COLORS[r(HAIR_COLORS.length)],
-    eyes: r(EYES.length),
+    hairColor,
+    eyes: elder ? [2, 3][r(2)] : r(EYES.length),
     eyeColor: EYE_COLORS[r(EYE_COLORS.length)],
     shirt: r(SHIRTS.length),
     shirtColor: SHIRT_COLORS[r(SHIRT_COLORS.length)],
-    accessory: r(ACCESSORIES.length),
+    accessory: elder && rnd() < 0.4 ? 1 : r(ACCESSORIES.length),
     accessoryColor: ACCESSORY_COLORS[r(ACCESSORY_COLORS.length)],
+    feature,
+    featureColor,
   };
 }
 
@@ -73,4 +96,6 @@ export const DEFAULT_AVATAR: AvatarConfig = {
   shirtColor: SHIRT_COLORS[0],
   accessory: 0,
   accessoryColor: ACCESSORY_COLORS[0],
+  feature: 0,
+  featureColor: FEATURE_COLORS[0],
 };

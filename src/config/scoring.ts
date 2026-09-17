@@ -5,9 +5,7 @@ export const SCORING = {
   /** 心数上限 */
   maxHearts: 10,
   /** 点数上限 = 10 心 */
-  get maxPoints() {
-    return this.pointsPerHeart * this.maxHearts;
-  },
+  maxPoints: 2500,
   /** 半心阈值：一颗心内累计 >= 125 显示半心 */
   halfHeartThreshold: 125,
 
@@ -26,7 +24,7 @@ export const SCORING = {
   /** 每周送礼上限（周一 00:00 本地时区重置），生日当天不受限 */
   weeklyGiftLimit: 2,
 
-  /** 非送礼互动得分 */
+  /** 非送礼互动得分（全部正向；对方送礼与关系变更不计分） */
   interaction: {
     meet: 40,
     chat: 20,
@@ -34,14 +32,14 @@ export const SCORING = {
     activity: 60,
     festival: 30,
     other: 20,
+    receivedGift: 0,
+    relationChange: 0,
   },
   /** 同一人同一天：聊天只算一次，其他类型第二次起减半 */
   sameDayRepeatFactor: 0.5,
 
-  /** 衰减：每天未互动扣分（最后互动次日起） */
+  /** 衰减：超过宽限天数后，每天未互动扣分（只掉到当前整心底部） */
   decayPerDay: 2,
-  /** 满心后不衰减 */
-  noDecayAtMaxHearts: true,
   /** 超过多少天不联系，头像变灰挂问号 */
   ghostAfterDays: 30,
   /** 手动加减心的步长 */

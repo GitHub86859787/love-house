@@ -1,5 +1,6 @@
 import type { RelationType } from '@/config/relations';
 import type { PreferenceCategory, PreferenceTier } from '@/config/reactions';
+export type { PreferenceCategory, PreferenceTier };
 
 /** 像素头像配置：每个部件独立的形状索引 + 颜色 */
 export interface AvatarConfig {
@@ -13,14 +14,22 @@ export interface AvatarConfig {
   shirtColor: string;
   accessory: number;
   accessoryColor: string;
+  /** 特征：皱纹 / 胡子 / 雀斑 等（v2 新增，缺省 0 = 无） */
+  feature?: number;
+  featureColor?: string;
 }
 
-export interface Birthday {
+/** 生辰：月日必填，年、时、分可选；isLunar 表示过农历生日 */
+export interface Birth {
+  year?: number;
   month: number;
   day: number;
-  /** 年份可不填 */
-  year?: number;
+  hour?: number;
+  minute?: number;
+  isLunar?: boolean;
 }
+
+export type PreferenceSource = 'manual' | 'ai' | 'fortune';
 
 export interface Preference {
   id: string;
@@ -28,7 +37,7 @@ export interface Preference {
   category: PreferenceCategory;
   tier: PreferenceTier;
   note?: string;
-  source: 'manual' | 'ai';
+  source: PreferenceSource;
   createdAt: number;
 }
 
@@ -38,6 +47,25 @@ export interface Note {
   createdAt: number;
 }
 
+/** 对方自己说的标签，如 MBTI / 血型 / 上升星座 */
+export interface SelfTag {
+  key: string;
+  value: string;
+}
+
+/** 占卜师解读缓存（阶段 5 使用，这里先留字段） */
+export interface FortuneCache {
+  inputHash: string;
+  createdAt: number;
+  data: unknown;
+  /** 被我标记为"不准"的推测文本 */
+  rejected: string[];
+  /** 准 / 不准 统计 */
+  hits: number;
+  misses: number;
+  lastAskedAt?: number;
+}
+
 export interface Person {
   id: string;
   name: string;
@@ -45,9 +73,10 @@ export interface Person {
   relation: RelationType;
   /** 认识日期 YYYY-MM-DD */
   metOn?: string;
-  birthday?: Birthday;
+  birth?: Birth;
   avatar: AvatarConfig;
   tags: string[];
+  selfTags: SelfTag[];
   preferences: Preference[];
   /** 忌讳 / 雷区 */
   taboos: string[];
@@ -62,21 +91,32 @@ export interface Person {
   lastInteractionAt?: number;
   /** 上次衰减结算到的本地日期 YYYY-MM-DD */
   lastDecayDate?: string;
-  /** 单独覆盖衰减开关（undefined 表示按关系类型默认） */
-  decayOverride?: boolean;
+  /** 单独覆盖"久未联系宽限天数"（undefined 表示按关系类型默认） */
+  staleDaysOverride?: number;
+  /** 关闭这个人的久未联系提醒 */
+  staleReminderMuted?: boolean;
+  /** 关系类型最近一次变更时间（用于屋顶变色动画） */
+  relationChangedAt?: number;
+  /** 「我」的档案 */
+  isMe?: boolean;
+  fortune?: FortuneCache;
   aiSummary?: { text: string; tips: string[]; sourceHash: string; createdAt: number };
   createdAt: number;
   updatedAt: number;
 }
 
-export type InteractionType = 'meet' | 'chat' | 'gift' | 'help' | 'activity' | 'festival' | 'other';
+/**
+ * 互动类型：全部为正向互动。
+ * receivedGift = 对方送我礼物（不加分）；relationChange = 系统自动记的关系变更事件（不加分）
+ */
+export type InteractionType = 'meet' | 'chat' | 'gift' | 'help' | 'activity' | 'festival' | 'other' | 'receivedGift' | 'relationChange';
 
 export interface Interaction {
   id: string;
   personId: string;
   at: number;
   type: InteractionType;
-  gift?: { name: string; tier: PreferenceTier; matchedPreferenceId?: string };
+  gift?: { name: string; tier: PreferenceTier; matchedPreferenceId?: string; price?: number };
   memo?: string;
   /** 系统算出的分 */
   computedPoints: number;
@@ -87,7 +127,7 @@ export interface Interaction {
   createdAt: number;
 }
 
-export type QuestType = 'daily' | 'reminder' | 'milestone';
+export type QuestType = 'daily' | 'reminder' | 'milestone' | 'custom';
 export type QuestStatus = 'open' | 'done' | 'skipped';
 
 export interface Quest {
@@ -100,7 +140,6 @@ export interface Quest {
   description?: string;
   dueDate?: string;
   status: QuestStatus;
-  rewardPoints: number;
   createdAt: number;
   resolvedAt?: number;
 }

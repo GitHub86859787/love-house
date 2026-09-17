@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Panel } from './Panel';
 import { Button } from './Button';
 import styles from './Modal.module.css';
@@ -14,7 +15,8 @@ interface Props {
 /** 弹出面板：缩放弹出动画 */
 export function Modal({ open, title, onClose, children, golden }: Props) {
   if (!open) return null;
-  return (
+  // 用 portal 挂到 body：面板的 clip-path 会裁切 fixed 子元素
+  return createPortal(
     <div className={styles.backdrop} onClick={onClose} role="dialog" aria-modal="true">
       <div className={styles.dialog} onClick={(e) => e.stopPropagation()}>
         <Panel golden={golden}>
@@ -25,6 +27,7 @@ export function Modal({ open, title, onClose, children, golden }: Props) {
           <div className={styles.body}>{children}</div>
         </Panel>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

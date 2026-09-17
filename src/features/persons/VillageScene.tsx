@@ -9,6 +9,7 @@ import { GATE, QUESTION_BUBBLE, bush, house, tree } from '@/pixel/sprites/villag
 import { HEART_SMALL } from '@/pixel/sprites/heart';
 import { heartsOf } from '@/ui/HeartBar';
 import { currentSeason, SEASON_PALETTE } from '@/lib/season';
+import { lastContactDate } from '@/features/scoring/decay';
 import { daysBetween } from '@/lib/date';
 import styles from './VillageScene.module.css';
 
@@ -16,9 +17,10 @@ interface Props {
   persons: Person[];
 }
 
+/** 超过 30 天没联系变灰：从最后互动日算，零互动的人从认识日 / 建档日算 */
 export function isGhost(p: Person, now = new Date()): boolean {
-  const last = p.lastInteractionAt ?? p.createdAt;
-  return daysBetween(new Date(last), now) > SCORING.ghostAfterDays;
+  if (p.isMe) return false;
+  return daysBetween(lastContactDate(p), now) > SCORING.ghostAfterDays;
 }
 
 /** 横向可滑动的小村庄：心多的离村口近 */
@@ -51,7 +53,11 @@ export function VillageScene({ persons }: Props) {
             <div key={p.id} className={styles.slot} onClick={() => nav(`/person/${p.id}`)} role="link" aria-label={p.name}>
               {i % 2 === 1 && <Sprite grid={treeGrid} scale={2} className={styles.tree} style={{ left: 0 }} />}
               {i % 3 === 0 && <Sprite grid={bushGrid} scale={2} className={styles.bush} style={{ left: 84 }} />}
-              <Sprite grid={house(RELATIONS[p.relation].roofColor, golden)} scale={2} className={styles.house} />
+              <Sprite
+                grid={house(RELATIONS[p.relation].roofColor, golden)}
+                scale={2}
+                className={`${styles.house} ${p.relationChangedAt && Date.now() - p.relationChangedAt < 60000 ? styles.roofFlash : ''}`}
+              />
               <div className={`${styles.villager} ${ghost ? '' : styles.bob}`} style={{ animationDelay: `${(i % 4) * 150}ms` }}>
                 <Avatar config={p.avatar} scale={2} ghost={ghost} />
               </div>

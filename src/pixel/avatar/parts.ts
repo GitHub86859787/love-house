@@ -347,9 +347,62 @@ export const ACCESSORIES: PartDef[] = [
   },
 ];
 
+
+/* ------------------------------ 特征：皱纹 / 胡子 / 雀斑（画在脸上、头发下） ------------------------------ */
+export const FEATURES: PartDef[] = [
+  { name: '无', draw: () => {} },
+  {
+    name: '皱纹',
+    draw: (g, c) => {
+      g.hline(7, 7, 2, c).hline(15, 7, 2, c);
+      g.set(7, 12, c).set(16, 12, c);
+      g.hline(10, 14, 1, c).hline(13, 14, 1, c);
+    },
+  },
+  {
+    name: '小胡子',
+    draw: (g, c) => {
+      g.hline(9, 12, 6, c);
+      g.set(8, 13, c).set(15, 13, c);
+    },
+  },
+  {
+    name: '大胡子',
+    draw: (g, c) => {
+      g.rect(7, 13, 10, 3, c);
+      g.rect(8, 16, 8, 2, c);
+      g.rect(10, 13, 4, 1, null);
+      g.rect(11, 13, 2, 1, c);
+    },
+  },
+  {
+    name: '皱纹＋胡子',
+    draw: (g, c) => {
+      g.hline(7, 7, 2, c).hline(15, 7, 2, c);
+      g.set(7, 12, c).set(16, 12, c);
+      g.hline(9, 12, 6, c);
+      g.set(8, 13, c).set(15, 13, c);
+    },
+  },
+  {
+    name: '雀斑',
+    draw: (g, c) => {
+      g.set(7, 11, c).set(9, 12, c).set(14, 12, c).set(16, 11, c);
+    },
+  },
+  {
+    name: '小痣',
+    draw: (g, c) => {
+      g.set(15, 12, c);
+    },
+  },
+];
+
+export const FEATURE_COLORS = ['#3b2412', '#8b5a2b', '#a86d43', '#8a8a8a', '#d9d9d9', '#c98b5e'];
+
 /* ------------------------------ 预设色板 ------------------------------ */
 export const SKIN_COLORS = ['#f8d9b8', '#f2c49a', '#e2a978', '#c98b5e', '#a86d43', '#7a4a2a'];
-export const HAIR_COLORS = ['#2b1d14', '#5c3a1e', '#8b5a2b', '#c98b45', '#e8c170', '#a8323c', '#4a6fa5', '#8a8a8a'];
+export const HAIR_COLORS = ['#2b1d14', '#5c3a1e', '#8b5a2b', '#c98b45', '#e8c170', '#a8323c', '#4a6fa5', '#8a8a8a', '#d9d9d9', '#f4f1ea'];
 export const EYE_COLORS = ['#2b1d14', '#5c3a1e', '#3a6b35', '#3b5fa0', '#7a4a8a', '#8a8a8a'];
 export const SHIRT_COLORS = ['#6daa2c', '#6fb7e8', '#e6323c', '#f5c542', '#e0883a', '#7a4a8a', '#3b5fa0', '#fff8e7'];
 export const ACCESSORY_COLORS = ['#3b2412', '#e6323c', '#f5c542', '#6fb7e8', '#d95d78', '#6daa2c', '#fff8e7', '#8a8a8a'];
@@ -360,9 +413,10 @@ export const PART_GROUPS = {
   eyes: { label: '眼睛', colorLabel: '瞳色', parts: EYES, colors: EYE_COLORS },
   shirt: { label: '上衣', colorLabel: '衣色', parts: SHIRTS, colors: SHIRT_COLORS },
   accessory: { label: '配饰', colorLabel: '配饰色', parts: ACCESSORIES, colors: ACCESSORY_COLORS },
+  feature: { label: '特征', colorLabel: '特征色', parts: FEATURES, colors: FEATURE_COLORS },
 } as const;
 
 export type PartKey = keyof typeof PART_GROUPS;
-export const PART_KEYS: PartKey[] = ['face', 'hair', 'eyes', 'shirt', 'accessory'];
+export const PART_KEYS: PartKey[] = ['face', 'hair', 'eyes', 'feature', 'shirt', 'accessory'];
 
 export { INK };

@@ -1,20 +1,68 @@
 import { useState } from 'react';
 import { db } from '@/db/db';
+import { DEFAULT_SETTINGS, updateSettings, useSettings } from '@/db/settings';
+import { RELATIONS, RELATION_ORDER } from '@/config/relations';
+import { SCORING } from '@/config/scoring';
 import { Page, PageHeader } from '@/app/Layout';
-import { Panel } from '@/ui/Panel';
+import { Panel, Inset } from '@/ui/Panel';
 import { Button } from '@/ui/Button';
 import { Modal } from '@/ui/Modal';
+import { Input } from '@/ui/Field';
 import { useToast } from '@/ui/Toast';
+
+function Toggle({ label, hint, checked, onChange }: { label: string; hint?: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0' }}>
+      <span style={{ flex: 1 }}>
+        <div>{label}</div>
+        {hint && <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>{hint}</div>}
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className="px-corner-sm"
+        style={{
+          width: 56,
+          height: 28,
+          border: '2px solid var(--wood-dark)',
+          background: checked ? 'var(--grass)' : 'var(--paper-deep)',
+          position: 'relative',
+          cursor: 'pointer',
+          padding: 0,
+        }}
+      >
+        <span
+          style={{
+            position: 'absolute',
+            top: 2,
+            left: checked ? 30 : 2,
+            width: 20,
+            height: 20,
+            background: 'var(--white)',
+            border: '2px solid var(--wood-light)',
+            transition: 'left 80ms steps(2)',
+          }}
+        />
+      </button>
+    </label>
+  );
+}
 
 export function SettingsPage() {
   const toast = useToast();
+  const settings = useSettings();
   const [confirmClear, setConfirmClear] = useState(false);
+  const [clearText, setClearText] = useState('');
 
   const clearAll = async () => {
+    if (clearText !== '清空') return;
     await db.transaction('rw', db.tables, async () => {
       for (const t of db.tables) await t.clear();
     });
     setConfirmClear(false);
+    setClearText('');
     toast('已清空全部数据');
   };
 
@@ -22,9 +70,56 @@ export function SettingsPage() {
     <Page>
       <PageHeader title="设置" />
 
+      <Panel title="计分规则">
+        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)', marginBottom: 8 }}>
+          每颗心 {SCORING.pointsPerHeart} 点。送礼：最爱 +{SCORING.gift.love} / 喜欢 +{SCORING.gift.like} / 一般 +{SCORING.gift.neutral} / 讨厌 {SCORING.gift.dislike} / 最讨厌{' '}
+          {SCORING.gift.hate}；生日送礼 ×{SCORING.birthdayGiftMultiplier}。聊天 +{SCORING.interaction.chat}、见面 +{SCORING.interaction.meet}、帮忙 +
+          {SCORING.interaction.help}、一起活动 +{SCORING.interaction.activity}、节日问候 +{SCORING.interaction.festival}。
+        </p>
+        <Toggle
+          label="每周送礼上限 2 次"
+          hint="周一重置；生日当天不受限。超出的会记录但不加分"
+          checked={settings.weeklyGiftLimitEnabled}
+          onChange={(v) => updateSettings({ weeklyGiftLimitEnabled: v })}
+        />
+      </Panel>
+
+      <Panel title="衰减与提醒">
+        <Toggle
+          label="好感度衰减"
+          hint={`超过宽限天数后每天 -${SCORING.decayPerDay}，只掉到当前整心底部。关闭后仍会提醒联系`}
+          checked={settings.decayEnabled}
+          onChange={(v) => updateSettings({ decayEnabled: v })}
+        />
+        <Inset>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)', marginBottom: 8 }}>各关系类型的久未联系宽限天数</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {RELATION_ORDER.map((r) => (
+              <label key={r} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--fs-sm)' }}>
+                <span style={{ width: 56, flex: 'none' }}>{RELATIONS[r].label}</span>
+                <Input
+                  inputMode="numeric"
+                  value={String(settings.graceDays[r])}
+                  onChange={(e) => {
+                    const n = Number(e.target.value.replace(/\D/g, '') || 0);
+                    updateSettings({ graceDays: { ...settings.graceDays, [r]: n } });
+                  }}
+                  style={{ minHeight: 32, padding: '4px 8px' }}
+                />
+                <span>天</span>
+              </label>
+            ))}
+          </div>
+          <div style={{ marginTop: 8, fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>家人默认不衰减，但超过宽限天数仍会提醒。</div>
+          <Button size="small" variant="ghost" style={{ marginTop: 8 }} onClick={() => updateSettings({ graceDays: DEFAULT_SETTINGS.graceDays })}>
+            恢复默认
+          </Button>
+        </Inset>
+      </Panel>
+
       <Panel title="数据">
         <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)', marginBottom: 12 }}>
-          所有数据只保存在这台设备的浏览器里。导出 / 导入备份将在阶段 5 开放。
+          所有数据只保存在这台设备的浏览器里。导出 / 导入备份将在后续阶段开放。
         </p>
         <Button variant="danger" block iconName="trash" onClick={() => setConfirmClear(true)}>
           清空全部数据
@@ -32,17 +127,18 @@ export function SettingsPage() {
       </Panel>
 
       <Panel title="关于">
-        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>人情村 v{__APP_VERSION__} · 阶段 1 骨架</p>
-        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>字体：缝合像素字体 Fusion Pixel（OFL 许可）</p>
+        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>人情村 v{__APP_VERSION__} · 阶段 2 核心循环</p>
+        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--ink-soft)' }}>字体：缝合像素字体 Fusion Pixel（OFL 许可）；农历：lunar-typescript（MIT）</p>
       </Panel>
 
       <Modal open={confirmClear} title="确定清空？" onClose={() => setConfirmClear(false)}>
-        <p>所有村民、互动、任务都会被删除，无法恢复。</p>
+        <p>所有村民、互动、任务、设置都会被删除，无法恢复。输入「清空」两个字确认：</p>
+        <Input value={clearText} onChange={(e) => setClearText(e.target.value)} placeholder="清空" />
         <div style={{ display: 'flex', gap: 8 }}>
           <Button block variant="ghost" onClick={() => setConfirmClear(false)}>
             取消
           </Button>
-          <Button block variant="danger" onClick={clearAll}>
+          <Button block variant="danger" onClick={clearAll} disabled={clearText !== '清空'}>
             清空
           </Button>
         </div>

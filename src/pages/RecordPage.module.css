@@ -1,0 +1,110 @@
+.people {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 0 8px;
+  scrollbar-width: none;
+}
+
+.people::-webkit-scrollbar {
+  display: none;
+}
+
+.personBtn {
+  flex: none;
+  width: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  background: var(--white);
+  border: 2px solid var(--wood-light);
+  cursor: pointer;
+  font-size: var(--fs-sm);
+}
+
+.personActive {
+  background: var(--gold);
+  border-color: var(--gold-dark);
+}
+
+.personName {
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.types {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.typeBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 8px 12px;
+  background: var(--white);
+  border: 2px solid var(--wood-light);
+  cursor: pointer;
+  text-align: left;
+}
+
+.typeActive {
+  background: var(--gold);
+  border-color: var(--gold-dark);
+}
+
+.typeHint {
+  font-size: var(--fs-sm);
+  color: var(--ink-soft);
+}
+
+.steps {
+  display: flex;
+  gap: 4px;
+  font-size: var(--fs-sm);
+  color: var(--ink-soft);
+}
+
+.step {
+  flex: 1;
+  height: 8px;
+  background: var(--paper-deep);
+}
+
+.stepDone {
+  background: var(--gold);
+}
+
+.tierRow {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.tierBtn {
+  flex: 1;
+  min-width: 56px;
+  padding: 6px 4px;
+  font-size: var(--fs-sm);
+  background: var(--white);
+  border: 2px solid var(--wood-light);
+  cursor: pointer;
+  text-align: center;
+}
+
+.tierActive {
+  background: var(--gold);
+  border-color: var(--gold-dark);
+}
+
+.suggest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
