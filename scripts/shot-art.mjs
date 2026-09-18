@@ -3,7 +3,7 @@ import { chromium } from 'playwright';
 const cat = process.argv[2] ?? 'ground';
 const BASE = process.env.SHOT_BASE ?? 'http://localhost:4173/';
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', headless: true });
-const ctx = await browser.newContext({ viewport: { width: cat === 'buildings' ? 1400 : 760, height: 1200 }, deviceScaleFactor: 1, locale: 'zh-CN' });
+const ctx = await browser.newContext({ viewport: { width: cat === 'buildings' ? 1700 : 760, height: 1200 }, deviceScaleFactor: 1, locale: 'zh-CN' });
 const page = await ctx.newPage();
 page.on('pageerror', (e) => console.error('pageerror', e.message));
 const shotEl = async (sel, file) => {
@@ -25,6 +25,8 @@ if (cat === 'buildings') {
   }
   await page.locator('[data-shot="lineup"]').screenshot({ path: 'shots/art-b-lineup.png' });
   console.log('wrote art-b-lineup.png');
+  await page.locator('[data-shot="grid"]').screenshot({ path: 'shots/art-b-grid.png' });
+  console.log('wrote art-b-grid.png');
   await browser.close();
   process.exit(0);
 }

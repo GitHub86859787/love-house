@@ -282,9 +282,35 @@ function lineup(frame: number): Grid {
   return g;
 }
 
+/** 九栋分两排（5 + 4），3× 看细节 */
+function grid2(frame: number): Grid {
+  const gap = 12;
+  const rowsOf = [BUILDINGS.slice(0, 5), BUILDINGS.slice(5)];
+  const rowW = (r: BuildingDef[]) => r.reduce((n, b) => n + b.w + gap, gap);
+  const rowH = (r: BuildingDef[]) => Math.max(...r.map((b) => b.h)) + 24;
+  const W = Math.max(...rowsOf.map(rowW));
+  const H = rowsOf.reduce((n, r) => n + rowH(r), 0);
+  const g = new Grid(W, H);
+  for (let y = 0; y < Math.ceil(H / TILE); y++) for (let x = 0; x < Math.ceil(W / TILE); x++) g.compose(grassAt('spring', x + 50, y + 50), x * TILE, y * TILE);
+  let y0 = 0;
+  for (const r of rowsOf) {
+    const h = rowH(r);
+    let x = gap;
+    for (const b of r) {
+      const y = y0 + h - 8 - b.h;
+      g.compose(b.draw('spring', false, frame), x, y);
+      if (b.smoke) g.compose(smokeSprite(frame), x + b.smoke[0], y + b.smoke[1]);
+      x += b.w + gap;
+    }
+    y0 += h;
+  }
+  return g;
+}
+
 function BuildingSheet({ scale, frame }: { season: Season; scale: Scale; frame: number }) {
   const all = useMemo(() => BUILDINGS.map((b) => ({ b, day: onGround(b, 'spring', false, frame), dusk: onGround(b, 'autumn', true, frame) })), [frame]);
   const row = useMemo(() => lineup(frame), [frame]);
+  const two = useMemo(() => grid2(frame), [frame]);
   return (
     <div className={styles.sheet} data-shot="sheet">
       <p className={styles.note}>建筑 · {scale}× · 每栋左春天白天 / 右秋天傍晚亮灯（整体换色表在第 6 类）。底部：九栋 1× 排在一起。</p>
@@ -303,8 +329,9 @@ function BuildingSheet({ scale, frame }: { season: Season; scale: Scale; frame: 
       <div className={styles.demo} data-shot="lineup">
         <Px grid={row} scale={1} />
       </div>
-      <div className={styles.demo}>
-        <Px grid={row} scale={2} />
+      <p className={styles.note}>九栋分两排 · 3×（春天白天）</p>
+      <div className={styles.demo} data-shot="grid">
+        <Px grid={two} scale={3} />
       </div>
     </div>
   );
