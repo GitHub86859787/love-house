@@ -3,7 +3,7 @@ import { chromium } from 'playwright';
 const cat = process.argv[2] ?? 'ground';
 const BASE = process.env.SHOT_BASE ?? 'http://localhost:4173/';
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', headless: true });
-const ctx = await browser.newContext({ viewport: { width: cat === 'buildings' || cat === 'chars' ? 1700 : 760, height: 1200 }, deviceScaleFactor: 1, locale: 'zh-CN' });
+const ctx = await browser.newContext({ viewport: { width: cat === 'light' ? 2800 : cat === 'buildings' || cat === 'chars' ? 1700 : 760, height: 1200 }, deviceScaleFactor: 1, locale: 'zh-CN' });
 const page = await ctx.newPage();
 page.on('pageerror', (e) => console.error('pageerror', e.message));
 const shotEl = async (sel, file) => {
@@ -12,6 +12,16 @@ const shotEl = async (sel, file) => {
   await page.locator(sel).screenshot({ path: `shots/${file}` });
   console.log('wrote', file);
 };
+if (cat === 'light') {
+  await page.goto(`${BASE}#/preview?tab=light&scale=3&shot=1&anim=0`);
+  await page.reload();
+  await page.waitForSelector('[data-shot="fx-live"]');
+  await page.waitForTimeout(500);
+  await shotEl('[data-shot="light"]', 'art-light.png');
+  await shotEl('[data-shot="fx"]', 'art-fx-frames.png');
+  await browser.close();
+  process.exit(0);
+}
 if (cat === 'chars') {
   await page.goto(`${BASE}#/preview?tab=chars&scale=3&shot=1&anim=0`);
   await page.reload();

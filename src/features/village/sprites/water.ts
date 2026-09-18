@@ -281,7 +281,7 @@ export function waterSheet(season: Season, frame: number): SheetItem[] {
   return items;
 }
 
-type Cell = 'g' | 'w';
+export type Cell = 'g' | 'w';
 /** 样例 12×8：溪从右上蜿蜒到左下汇成湖，中段一座南北向木桥 */
 function waterLayout(): { map: Cell[][]; bridge: [number, number][]; reeds: [number, number, number][]; ducks: [number, number, 'l' | 'r'][]; boat: [number, number] } {
   const W = 12;
