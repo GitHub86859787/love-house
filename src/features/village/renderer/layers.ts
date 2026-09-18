@@ -22,12 +22,17 @@ export interface StaticLayers {
   next?: Slot;
   lightsOn: boolean;
   ground: HTMLCanvasElement;
-  water: HTMLCanvasElement[];
-  decor: HTMLCanvasElement;
   buildings: HTMLCanvasElement;
-  trees: HTMLCanvasElement[];
-  /** 建层花了多少毫秒 */
+  /** 水 3 帧、小物、树 2 帧：首帧只有 water[0]，其余在后面几帧里补齐（null = 还没建） */
+  water: (HTMLCanvasElement | null)[];
+  decor: HTMLCanvasElement | null;
+  trees: (HTMLCanvasElement | null)[];
+  /** 还没做的建层步骤，每帧做一步 */
+  pending: (() => void)[];
+  /** 首批（地面 + 建筑 + 水 0）花了多少毫秒 */
   buildMs: number;
+  /** 全部建完时累计的建层毫秒 */
+  totalMs: number;
 }
 
 const LIT: Set<Slot> = new Set(['dusk', 'evening', 'night']);
@@ -63,6 +68,8 @@ export function groundGrid(season: Season): Grid {
         else if (k === 'f') t = tile(`f|${season}|${x}|${y}`, () => fieldTile(season, x, y));
         else if (k === 'S') t = tile(`S|${season}|${x}|${y}`, () => stoneTile(season, x, y));
         else if (k === '=') {
+          // 路的锯齿边草侧是透明的，先铺草再铺路，别让画布底色漏出来
+          g.compose(tile(`.|${season}|${x}|${y}`, () => grassAt(season, x, y)), x * TILE, y * TILE);
           const e: Edges = { n: !isPathy(x, y - 1), s: !isPathy(x, y + 1), e: !isPathy(x + 1, y), w: !isPathy(x - 1, y) };
           const c: Corners = { ne: !isPathy(x + 1, y - 1), nw: !isPathy(x - 1, y - 1), se: !isPathy(x + 1, y + 1), sw: !isPathy(x - 1, y + 1) };
           t = tile(`=|${season}|${x}|${y}`, () => pathTile(season, e, x, y, c));
@@ -167,7 +174,7 @@ export function emissiveRects(): Emissive[] {
   return out;
 }
 
-/** 建全部静态层 */
+/** 建静态层：先出地面 + 建筑 + 水第 0 帧，其余排进 pending，由场景每帧补一步 */
 export function buildLayers(season: Season, slot: Slot, next?: Slot): StaticLayers {
   const t0 = performance.now();
   const lit = lightsOnFor(slot, next);
@@ -178,9 +185,30 @@ export function buildLayers(season: Season, slot: Slot, next?: Slot): StaticLaye
     return pools.length ? applyLightPools(n, day, pools) : n;
   };
   const ground = gridToCanvas(grade(groundGrid(season)));
-  const water = [0, 1, 2].map((f) => gridToCanvas(grade(waterGrid(season, f))));
-  const decor = gridToCanvas(grade(decorGrid(season, lit)));
   const buildings = gridToCanvas(grade(buildingsGrid(season, lit)));
-  const trees = [0, 1].map((f) => gridToCanvas(grade(treesGrid(season, f))));
-  return { season, slot, next, lightsOn: lit, ground, water, decor, buildings, trees, buildMs: performance.now() - t0 };
+  const water0 = gridToCanvas(grade(waterGrid(season, 0)));
+  const L: StaticLayers = { season, slot, next, lightsOn: lit, ground, buildings, water: [water0, null, null], decor: null, trees: [null, null], pending: [], buildMs: 0, totalMs: 0 };
+  L.buildMs = performance.now() - t0;
+  L.totalMs = L.buildMs;
+  const step = (f: () => void) => () => {
+    const a = performance.now();
+    f();
+    L.totalMs += performance.now() - a;
+  };
+  L.pending = [
+    step(() => { L.decor = gridToCanvas(grade(decorGrid(season, lit))); }),
+    step(() => { L.trees[0] = gridToCanvas(grade(treesGrid(season, 0))); }),
+    step(() => { L.water[1] = gridToCanvas(grade(waterGrid(season, 1))); }),
+    step(() => { L.water[2] = gridToCanvas(grade(waterGrid(season, 2))); }),
+    step(() => { L.trees[1] = gridToCanvas(grade(treesGrid(season, 1))); }),
+  ];
+  return L;
+}
+
+/** 做一步没做完的建层；全做完返回 false */
+export function buildStep(L: StaticLayers): boolean {
+  const f = L.pending.shift();
+  if (!f) return false;
+  f();
+  return true;
 }

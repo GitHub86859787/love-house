@@ -233,8 +233,8 @@ export function walkMask(edges: Edges, corners: Corners, rnd: Rng, x: number, y:
  * 草的部分透明（底下的草格透出来），交界处在草侧点几粒草暗阶。
  */
 export function pathTile(season: Season, edges: Edges, x = 0, y = 0, corners: Corners = NO_CORNERS): Grid {
+  void season; // 路面四季同色，参数留着和其他图块函数一致
   const r = ramp('earth');
-  const gr = SEASON_RAMPS[season].grass;
   const st = ramp('stone');
   const rnd = makeRng(x, y, 200);
   const mask = walkMask(edges, corners, rnd, x, y);
@@ -250,11 +250,7 @@ export function pathTile(season: Season, edges: Edges, x = 0, y = 0, corners: Co
   const interior: [number, number][] = [];
   for (let py = 0; py < TILE; py++) {
     for (let px = 0; px < TILE; px++) {
-      if (!mask[py][px]) {
-        // 草侧：交界处点草茬
-        if ((isPath(px + 1, py) || isPath(px - 1, py) || isPath(px, py + 1) || isPath(px, py - 1)) && rnd() < 0.35) g.set(px, py, gr.dark);
-        continue;
-      }
+      if (!mask[py][px]) continue; // 草侧留空：交界不点草茬，1× 下会成一圈黑虚线
       const grassN = !isPath(px, py - 1);
       const grassW = !isPath(px - 1, py);
       const grassS = !isPath(px, py + 1);

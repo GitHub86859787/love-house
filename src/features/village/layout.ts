@@ -211,9 +211,10 @@ const HERO_PROPS: PropSpot[] = [
   { kind: 'sign', x: 10, y: 21 },
   { kind: 'sign', x: 5, y: 21 },
   { kind: 'crate', x: 16, y: 3 },
-  { kind: 'barrel', x: 17, y: 3 },
-  { kind: 'crate', x: 21, y: 3 },
-  { kind: 'barrel', x: 16, y: 2 },
+  { kind: 'crate', x: 17, y: 3 },
+  { kind: 'barrel', x: 18, y: 3 },
+  { kind: 'stump', x: 20, y: 3 },
+  { kind: 'stump', x: 21, y: 3 },
   { kind: 'clothesline', x: 12, y: 2 },
   { kind: 'pumpkin', x: 9, y: 2 },
   { kind: 'snowman', x: 0, y: 21 },
@@ -253,7 +254,30 @@ export function isOpenGrass(x: number, y: number): boolean {
   return groundAt(x, y) === '.' && !isBuildingCell(x, y) && !isTreeCell(x, y);
 }
 
-const FILLERS: PropKind[] = ['flower', 'flower', 'bush', 'flower', 'rock', 'flower', 'stump', 'bush', 'flower', 'rock', 'leaves'];
+/** 按「这格属于哪一带」决定放什么，让每样东西有理由在那儿 */
+type Zone = 'workshop' | 'inn' | 'homes' | 'tent' | 'lake' | 'field' | 'plaza' | 'peninsula';
+export function zoneOf(x: number, y: number): Zone {
+  const nearWater = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]].some(([dx, dy]) => groundAt(x + dx, y + dy) === '~');
+  const nearField = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => groundAt(x + dx, y + dy) === 'f');
+  if (nearField) return 'field';
+  if (nearWater) return 'lake';
+  if (y <= 8 && x >= 15) return 'workshop';
+  if (y <= 8) return 'homes';
+  if (y >= 15 && x <= 6) return 'inn';
+  if (y >= 10 && y <= 15 && x <= 7) return 'tent';
+  if (x >= 18 && y >= 12) return 'peninsula';
+  return 'plaza';
+}
+const ZONE_FILLERS: Record<Zone, PropKind[]> = {
+  workshop: ['crate', 'stump', 'bush', 'barrel', 'rock', 'stump'], // 木箱木桶木料，掺点灌木石头别像仓库
+  inn: ['barrel', 'crate', 'bush', 'barrel', 'flower', 'crate'], // 旅店门口的箱桶
+  homes: ['flower', 'bush', 'flower', 'flower', 'bush', 'flower'], // 花丛灌木
+  tent: ['flower', 'bush', 'rock', 'flower', 'bush', 'flower'],
+  lake: ['reed', 'rock', 'reed', 'reed', 'rock', 'reed'], // 芦苇石头
+  field: ['pumpkin', 'bush', 'rock', 'pumpkin', 'bush', 'flower'], // 南瓜（秋）
+  plaza: ['flower', 'bush', 'flower', 'rock', 'flower', 'bush'],
+  peninsula: ['reed', 'bush', 'rock', 'flower', 'reed', 'bush'],
+};
 
 /**
  * 全部小物：重点物 + 围栏 + 自动填充。
@@ -264,10 +288,8 @@ export function allProps(): PropSpot[] {
   const has = (x: number, y: number) => props.some((p) => p.x === x && p.y === y);
   const free = (x: number, y: number) => isOpenGrass(x, y) && !has(x, y);
   const pickFiller = (x: number, y: number): PropKind => {
-    // 水边多放芦苇；其余按哈希挑
-    const nearWater = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => groundAt(x + dx, y + dy) === '~');
-    if (nearWater && hash2(x, y, 31) < 0.7) return 'reed';
-    return FILLERS[Math.floor(hash2(x, y, 32) * FILLERS.length)];
+    const list = ZONE_FILLERS[zoneOf(x, y)];
+    return list[Math.floor(hash2(x, y, 32) * list.length)];
   };
   const fillRuns = (horizontal: boolean) => {
     const outer = horizontal ? ROWS : COLS;

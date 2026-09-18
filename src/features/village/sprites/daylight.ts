@@ -203,13 +203,19 @@ export function applySlot(src: Grid, slot: Slot, next?: Slot, emissive: Emissive
   if (slot === 'day' && !next) return src;
   const out = new Grid(src.w, src.h);
   const isEmissive = (x: number, y: number) => emissive.some((e) => x >= e.x && y >= e.y && x < e.x + e.w && y < e.y + e.h);
-  for (let y = 0; y < src.h; y++)
-    for (let x = 0; x < src.w; x++) {
-      const c = src.get(x, y);
-      if (!c) continue;
-      if (GOLD.has(c) && isEmissive(x, y)) out.set(x, y, c);
-      else out.set(x, y, gradeColor(c, slot, next));
-    }
+  // 一张图里颜色很少（≤ 48 + 人物色），按颜色本地缓存，每个像素只查一次 Map
+  const local = new Map<string, string>();
+  const w = src.w;
+  const data = src.data;
+  const od = out.data;
+  for (let k = 0; k < data.length; k++) {
+    const c = data[k];
+    if (!c) continue;
+    if (GOLD.has(c) && isEmissive(k % w, (k - (k % w)) / w)) { od[k] = c; continue; }
+    let v = local.get(c);
+    if (v === undefined) { v = gradeColor(c, slot, next); local.set(c, v); }
+    od[k] = v;
+  }
   return out;
 }
 

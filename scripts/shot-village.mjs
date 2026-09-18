@@ -82,6 +82,27 @@ await closeDialogs();
 await page.screenshot({ path: 'shots/village-home.png', fullPage: false });
 console.log('wrote village-home.png');
 const perfHome = await page.evaluate(() => window.__villagePerf);
+if (process.argv.includes('--home')) {
+  await page.waitForTimeout(3000);
+  const steady = await page.evaluate(() => window.__villagePerf);
+  // 再看一眼深夜（换色 + 光池）的首帧
+  await page.setViewportSize({ width: 1300, height: 1300 });
+  await page.goto(`${BASE}#/preview?tab=village&season=winter&slot=night&scale=1&shot=1`);
+  await page.reload();
+  await page.waitForSelector('[data-shot="village"] canvas');
+  await page.waitForTimeout(2500);
+  const night = await page.evaluate(() => window.__villagePerf);
+  await page.locator('[data-shot="village"] canvas[aria-label="人情村"]').screenshot({ path: 'shots/village-check-winter-night.png' });
+  await page.goto(`${BASE}#/preview?tab=village&season=spring&slot=day&scale=3&shot=1&anim=0&frame=20`);
+  await page.reload();
+  await page.waitForSelector('[data-shot="village"] canvas');
+  await page.waitForTimeout(1500);
+  await page.locator('[data-shot="village"] canvas[aria-label="人情村"]').screenshot({ path: 'shots/village-check-spring-day.png' });
+  writeFileSync('shots/village-perf.json', JSON.stringify({ home: perfHome, homeSteady: steady, winterNight: night }, null, 2));
+  console.log('perf', JSON.stringify({ home: perfHome, homeSteady: steady, winterNight: night }));
+  await browser.close();
+  process.exit(0);
+}
 
 const canvas = page.locator('canvas[aria-label="人情村"]');
 const box = async () => canvas.boundingBox();

@@ -12,7 +12,7 @@ import { duckSprite, boatSprite } from '../sprites/water';
 import { fxKind, particlesAt } from '../sprites/fx';
 import { gradeColor, type Slot } from '../sprites/daylight';
 import { fortuneTellerAvatar } from '@/features/fortune/teller';
-import { buildLayers, type StaticLayers } from './layers';
+import { buildLayers, buildStep, type StaticLayers } from './layers';
 import { spriteCanvas, memoGrid } from './canvas';
 import { placeVillagers, stepActors, type Actor, type Overflow } from './behavior';
 import { ramp } from '../palette';
@@ -36,8 +36,12 @@ export interface HitRect {
 }
 
 export interface Perf {
+  /** 首帧：首批建层 + 第一次绘制 */
   firstFrameMs: number;
+  /** 首批建层（地面 + 建筑 + 水 0） */
   buildMs: number;
+  /** 全部层建完的累计建层时间 */
+  totalBuildMs: number;
   frameMs: number;
   frames: number;
 }
@@ -47,7 +51,7 @@ export class Scene {
   actors: Actor[] = [];
   overflow: Overflow[] = [];
   frame = 0;
-  perf: Perf = { firstFrameMs: 0, buildMs: 0, frameMs: 0, frames: 0 };
+  perf: Perf = { firstFrameMs: 0, buildMs: 0, totalBuildMs: 0, frameMs: 0, frames: 0 };
   private frameAcc = 0;
   private model: VillageModel | null = null;
 
@@ -74,6 +78,7 @@ export class Scene {
     if (l && l.season === season && l.slot === slot && l.next === next) return;
     this.layers = buildLayers(season, slot, next);
     this.perf.buildMs = this.layers.buildMs;
+    this.perf.totalBuildMs = this.layers.totalMs;
   }
 
   tick() {
@@ -91,10 +96,11 @@ export class Scene {
     const f = this.frame;
     ctx.clearRect(0, 0, MAP_W, MAP_H);
     ctx.drawImage(L.ground, 0, 0);
-    ctx.drawImage(L.water[f % 3], 0, 0);
-    ctx.drawImage(L.decor, 0, 0);
+    ctx.drawImage(L.water[f % 3] ?? L.water[0]!, 0, 0);
+    if (L.decor) ctx.drawImage(L.decor, 0, 0);
     ctx.drawImage(L.buildings, 0, 0);
-    ctx.drawImage(L.trees[Math.floor(f / 4) % 2], 0, 0);
+    const tree = L.trees[Math.floor(f / 4) % 2] ?? L.trees[0];
+    if (tree) ctx.drawImage(tree, 0, 0);
 
     const put = (g: import('@/pixel/painter').Grid, x: number, y: number) => ctx.drawImage(spriteCanvas(g, slot, next), x, y);
 
@@ -157,8 +163,13 @@ export class Scene {
     const dt = performance.now() - t0;
     if (this.perf.frames === 0) this.perf.firstFrameMs = dt + this.perf.buildMs;
     this.perf.frames++;
-    this.frameAcc += dt;
-    this.perf.frameMs = this.frameAcc / this.perf.frames;
+    // 首帧之后每帧只累计绘制耗时（不含补建层）
+    if (this.perf.frames > 1) {
+      this.frameAcc += dt;
+      this.perf.frameMs = this.frameAcc / (this.perf.frames - 1);
+    }
+    // 画完这帧再补一步没建完的层，下一帧就有了
+    if (buildStep(L)) this.perf.totalBuildMs = L.totalMs;
   }
 
   private badge(p: Placement, n: number, slot: Slot, next?: Slot) {
