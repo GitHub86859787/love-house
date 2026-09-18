@@ -252,13 +252,13 @@ function FloraSheet({ season, scale, frame }: { season: Season; scale: Scale; fr
 /** 把一栋房子放在春天草地上看（含烟，烟囱四季都冒） */
 function houseOnGrass(season: Season, night: boolean, frame: number): Grid {
   const cols = 7;
-  const rows = 6;
+  const rows = 9;
   const g = new Grid(cols * TILE, rows * TILE);
   for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) g.compose(grassAt('spring', x + 30, y + 30), x * TILE, y * TILE);
   const ox = 8;
-  const oy = 14;
+  const oy = 16;
   g.compose(oldHouseSprite(season, night, frame), ox, oy);
-  g.compose(smokeSprite(frame), ox + 62, oy - 14);
+  g.compose(smokeSprite(frame), ox + 64, oy - 14);
   return g;
 }
 

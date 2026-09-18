@@ -36,21 +36,23 @@
  5   . . F F F F F F . . H H H H H . W W W W W W ~ ~
  6   . . F F F F F F . . H H H H H . W W W W W W ~ ~
  7   . . F F F F F F . . H H H H H . W W W W W W ~ ~
- 8   . . F F F F F F . . . = = . . . W W W W W W ~ ~
- 9   . . X X X X X . . . . = = . . . . . = . . ~ ~ .
+ 8   . . F F F F F F . . H H H H H . W W W W W W ~ ~
+ 9   . . F F F F F F . . . = = . . . . . = . . ~ ~ .
 10   . . X X X X X . P P P P P P P P T T T T ~ ~ . .
 11   . . X X X X X . P P P P P P P P T T T T ~ ~ . .
 12   . . X X X X X . P P P P P P P P T T T T ~ ~ . .
-13   . . . . = . . . P P P o P P P P T T T T ~ ~ . .
-14   . . I I I I I . P P P P P P P P B ~ ~ L L L L L L
+13   . . X X X X X . P P P o P P P P T T T T ~ ~ . .
+14   . . . . = . . . P P P P P P P P B ~ ~ L L L L L L
 15   . . I I I I I . P P P P P P P P B ~ ~ L L L L L L
 16   . . I I I I I . . . . = = . . . ~ ~ r L L L L L L
 17   . . I I I I I . . . . = = . . ~ ~ r r L L L L L L
 18   . . I I I I I . . . . = = . ~ ~ r . . L L L L L L
-19   . . . . . . . . . . G G G G ~ ~ . . . L L L L L L
+19   . . I I I I I . . . . G G G G ~ ~ . . L L L L L L
 20   ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ G G G G ~ . . . . . . . . . .
 21   ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ G = = G . . . . . . . . . . .
 ```
+
+老宅 `F` 两层，占 6×7（第 3–9 行）；我的家 `H` 占 5×6（第 3–8 行）；帐篷 `X`、旅店 `I` 相应下移一行。
 
 `^` 山脚 / 树林边（顶部一排远山 + 树）；`~` 小溪（从 (22,0) 沿右缘下来，在 (20,9) 折向左下，贴着湖边小屋西侧南下，从 (14,19) 一路向西南到 (0,20)）；`B` 木桥（广场右侧，(16,14–15)，横跨溪到湖边小屋）；`r` 芦苇；`t` 田（老宅后面）；`=` 主路；`o` 井；`F` 老宅；`H` 我的家；`W` 工坊；`X` 帐篷；`P` 广场；`T` 茶馆；`I` 旅店；`L` 湖边小屋（含码头、小船）；`G` 村口牌坊与石阶。
 
