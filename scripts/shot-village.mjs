@@ -119,8 +119,10 @@ const p2 = await wide.newPage();
 // IndexedDB 不在 storageState 里：预览页和首页同源，同一个浏览器 profile 才共享。这里改用同一个 context。
 await p2.close();
 await wide.close();
+// IndexedDB 只在这个 context 里，所以继续用手机 context（像素比 3），只把视口放宽；1× 拼图在 stitch 时按 3 缩回真实像素
 await page.setViewportSize({ width: 1300, height: 1300 });
 const perf = { home: perfHome };
+const SCENE = '[data-shot="village"] canvas[aria-label="人情村"]';
 for (const scale of [1, 3]) {
   for (const season of ['spring', 'summer', 'autumn', 'winter']) {
     for (const slot of ['dawn', 'day', 'night']) {
@@ -128,7 +130,7 @@ for (const scale of [1, 3]) {
       await page.reload();
       await page.waitForSelector('[data-shot="village"] canvas');
       await page.waitForTimeout(500);
-      await page.locator('[data-shot="village"]').screenshot({ path: `shots/village-${scale}x-${season}-${slot}.png` });
+      await page.locator(SCENE).screenshot({ path: `shots/village-${scale}x-${season}-${slot}.png` });
       console.log('wrote', `village-${scale}x-${season}-${slot}.png`);
       if (scale === 1) perf[`${season}-${slot}`] = await page.evaluate(() => window.__villagePerf);
     }
@@ -139,7 +141,7 @@ await page.goto(`${BASE}#/preview?tab=village&season=spring&slot=day&scale=3&sho
 await page.reload();
 await page.waitForSelector('[data-shot="village"] canvas');
 await page.waitForTimeout(500);
-await page.locator('[data-shot="village"]').screenshot({ path: 'shots/village-empty-check.png' });
+await page.locator(SCENE).screenshot({ path: 'shots/village-empty-check.png' });
 console.log('wrote village-empty-check.png');
 // 稳定运行 100 帧的每帧耗时（动画开着，等 13 s）
 await page.goto(`${BASE}#/preview?tab=village&season=spring&slot=night&scale=1&shot=1`);
