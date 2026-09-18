@@ -58,7 +58,7 @@ export function VillageSheet({ season, scale, animate, frame, slotParam, debugPa
         {perf && ` · 首批建层 ${perf.buildMs.toFixed(0)} ms · 首帧 ${perf.firstFrameMs.toFixed(0)} ms · 全部层 ${perf.totalBuildMs.toFixed(0)} ms · 每帧 ${perf.frameMs.toFixed(2)} ms（${perf.frames} 帧）`}
       </p>
       <div className={styles.demo} data-shot="village" style={{ padding: 0, border: 0, background: 'transparent' }}>
-        <VillageCanvas model={model} season={season} slot={slot === 'auto' ? undefined : slot} scale={scale} animate={animate} frame={animate ? undefined : frame} debug={debug} onPerf={setPerf} />
+        <VillageCanvas model={model} season={season} slot={slot === 'auto' ? undefined : slot} scale={scale} animate={animate} frame={animate ? undefined : frame} debug={debug} signs onPerf={setPerf} />
       </div>
     </div>
   );

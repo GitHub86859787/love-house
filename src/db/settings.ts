@@ -31,6 +31,17 @@ export interface Settings {
   lastExportAt?: number;
   /** 上次衰减结算的日期 */
   lastDecayRunDate?: string;
+  /** 村里每栋门口的区域名牌：不设时新用户前 7 天常显，之后自动收起 */
+  areaSigns?: boolean;
+}
+
+/** 区域名牌现在要不要显示 */
+export function areaSignsVisible(s: Settings, now = new Date()): boolean {
+  if (s.areaSigns !== undefined) return s.areaSigns;
+  if (!s.firstUseDate) return true;
+  const [y, m, d] = s.firstUseDate.split('-').map(Number);
+  const first = new Date(y, (m || 1) - 1, d || 1).getTime();
+  return now.getTime() - first < 7 * 86400000;
 }
 
 export const DEFAULT_SETTINGS: Settings = {

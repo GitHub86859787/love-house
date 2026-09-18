@@ -16,9 +16,12 @@ import { buildLayers, buildStep, type StaticLayers } from './layers';
 import { spriteCanvas, memoGrid } from './canvas';
 import { placeVillagers, stepActors, type Actor, type Overflow } from './behavior';
 import { ramp } from '../palette';
+import { nameplateSprite } from '../sprites/nameplate';
 
 
 export interface Debug {
+  /** 门口的区域名牌 */
+  signs?: boolean;
   grid?: boolean;
   areas?: boolean;
   empty?: boolean;
@@ -103,6 +106,15 @@ export class Scene {
     if (tree) ctx.drawImage(tree, 0, 0);
 
     const put = (g: import('@/pixel/painter').Grid, x: number, y: number) => ctx.drawImage(spriteCanvas(g, slot, next), x, y);
+
+    // 门口的区域名牌（牌坊有自己的匾额；湖边小屋放在甲板左端）
+    if (debug.signs)
+      for (const p of PLACEMENTS) {
+        if (p.key === 'gate') continue;
+        const px = p.x * TILE + 1;
+        const py = p.key === 'lakehouse' ? (p.y + p.h - 2) * TILE + 4 : (p.y + p.h) * TILE + 2;
+        put(nameplateSprite(p.key), px, py);
+      }
 
     // 烟囱烟（老宅、旅店、工坊）
     for (const key of ['oldhouse', 'inn', 'workshop'] as const) {

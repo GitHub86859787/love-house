@@ -73,13 +73,13 @@ export interface Placement {
 
 export const PLACEMENTS: Placement[] = [
   { key: 'oldhouse', x: 2, y: 2, w: 6, h: 7, area: 'family', label: '老宅', cells: [[4, 9], [6, 9], [2, 10], [7, 10], [3, 9], [5, 10]], faces: ['down', 'left', 'right', 'down'], cap: 4 },
-  { key: 'home', x: 10, y: 3, w: 5, h: 6, area: 'home', label: '我的家', cells: [[12, 9], [10, 9], [14, 10], [11, 10]], faces: ['down', 'right', 'left', 'down'], cap: 2 },
-  { key: 'workshop', x: 16, y: 4, w: 6, h: 5, area: 'workshop', label: '工坊', cells: [[18, 9], [20, 9], [16, 9], [21, 9], [17, 9], [19, 9]], faces: ['down', 'left', 'right', 'down'], cap: 4 },
+  { key: 'home', x: 10, y: 3, w: 5, h: 6, area: 'home', label: '我的家', cells: [[12, 9], [13, 9], [14, 10], [11, 10]], faces: ['down', 'right', 'left', 'down'], cap: 2 },
+  { key: 'workshop', x: 16, y: 4, w: 6, h: 5, area: 'workshop', label: '工坊', cells: [[18, 9], [20, 9], [17, 9], [21, 9], [19, 9]], faces: ['down', 'left', 'right', 'down'], cap: 4 },
   { key: 'tent', x: 2, y: 11, w: 5, h: 4, area: 'tent', label: '星婆婆的帐篷', cells: [[4, 15], [6, 15]], faces: ['down', 'left'], cap: 1 },
   { key: 'plaza', x: 10, y: 12, w: 4, h: 3, area: 'plaza', label: '朋友广场', cells: [[9, 14], [14, 13], [11, 15], [8, 12], [15, 11], [13, 15], [9, 11], [14, 15]], faces: ['right', 'left', 'down', 'down', 'left', 'up'], cap: 6 },
   { key: 'teahouse', x: 19, y: 12, w: 4, h: 4, area: 'plaza', label: '茶馆', cells: [[20, 16], [22, 16], [19, 17]], faces: ['down', 'left', 'right'], cap: 3 },
-  { key: 'inn', x: 1, y: 15, w: 5, h: 5, area: 'inn', label: '旅店', cells: [[3, 20], [5, 20], [1, 20], [2, 20]], faces: ['down', 'left', 'right', 'up'], cap: 4 },
-  { key: 'lakehouse', x: 11, y: 16, w: 5, h: 5, area: 'lakeside', label: '湖边小屋', cells: [[12, 19], [14, 19], [10, 18], [11, 19]], faces: ['down', 'left', 'right', 'down'], cap: 3 },
+  { key: 'inn', x: 1, y: 15, w: 5, h: 5, area: 'inn', label: '旅店', cells: [[3, 20], [5, 20], [2, 20], [4, 20]], faces: ['down', 'left', 'right', 'up'], cap: 4 },
+  { key: 'lakehouse', x: 11, y: 16, w: 5, h: 5, area: 'lakeside', label: '湖边小屋', cells: [[12, 19], [14, 19], [10, 18], [13, 19]], faces: ['down', 'left', 'right', 'down'], cap: 3 },
   { key: 'gate', x: 6, y: 19, w: 4, h: 3, area: 'all', label: '村口', cells: [[7, 18], [8, 18]], faces: ['down', 'down'], cap: 0 },
 ];
 

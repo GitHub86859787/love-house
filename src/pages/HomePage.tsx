@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useNavigate } from 'react-router-dom';
 import { db } from '@/db/db';
 import { sortByAffection } from '@/db/persons';
-import { useSettings } from '@/db/settings';
+import { areaSignsVisible, useSettings } from '@/db/settings';
 import { Page, PageHeader } from '@/app/Layout';
 import { Panel } from '@/ui/Panel';
 import { TaskBoard } from '@/features/quests/TaskBoard';
@@ -30,7 +30,7 @@ export function HomePage() {
     <Page>
       <PageHeader title="人情村" subtitle={dateText} />
 
-      <VillageCanvas model={model} bleed />
+      <VillageCanvas model={model} bleed signs={areaSignsVisible(settings)} />
 
       <Tutorial />
 

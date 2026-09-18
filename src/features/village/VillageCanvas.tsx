@@ -28,6 +28,8 @@ export interface VillageCanvasProps {
   /** 冻结在某一逻辑帧（截图用） */
   frame?: number;
   debug?: Debug;
+  /** 门口的区域名牌 */
+  signs?: boolean;
   onPerf?: (p: Perf) => void;
   /** 首页：左右出血到页边 */
   bleed?: boolean;
@@ -39,7 +41,7 @@ declare global {
   }
 }
 
-export function VillageCanvas({ model, season, slot, next, scale, animate = true, frame, debug, onPerf, bleed }: VillageCanvasProps) {
+export function VillageCanvas({ model, season, slot, next, scale, animate = true, frame, debug, signs, onPerf, bleed }: VillageCanvasProps) {
   const nav = useNavigate();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
@@ -49,7 +51,7 @@ export function VillageCanvas({ model, season, slot, next, scale, animate = true
   const [autoScale, setAutoScale] = useState(1);
   const [panel, setPanel] = useState<{ placement: Placement; x: number; y: number } | null>(null);
   const [entering, setEntering] = useState(false);
-  const dbg = useMemo(() => debug ?? {}, [debug?.grid, debug?.areas, debug?.empty, debug?.hit]); // eslint-disable-line react-hooks/exhaustive-deps
+  const dbg = useMemo<Debug>(() => ({ ...(debug ?? {}), signs: signs ?? debug?.signs }), [debug?.grid, debug?.areas, debug?.empty, debug?.hit, debug?.signs, signs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const s: Season = season ?? currentSeason(new Date(clock));
   const st = useMemo(() => (slot ? { slot, next, lightsOn: true } : slotAt(new Date(clock), s)), [slot, next, clock, s]);

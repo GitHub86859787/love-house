@@ -1,5 +1,5 @@
 import { db } from '@/db/db';
-import { DEFAULT_SETTINGS, updateSettings, useSettings } from '@/db/settings';
+import { DEFAULT_SETTINGS, updateSettings, useSettings, areaSignsVisible } from '@/db/settings';
 import { RELATIONS, RELATION_ORDER } from '@/config/relations';
 import { SCORING } from '@/config/scoring';
 import { HOLIDAYS } from '@/config/holidays';
@@ -122,6 +122,10 @@ export function SettingsPage() {
             恢复默认
           </Button>
         </Inset>
+      </Panel>
+
+      <Panel title="村庄">
+        <Toggle label="门口的区域名牌" hint="每栋房子门口一块小木牌，标这一区是家人、朋友还是同事。新用户前 7 天常显，之后默认收起" checked={areaSignsVisible(settings)} onChange={(v) => updateSettings({ areaSigns: v })} />
       </Panel>
 
       <Panel title="任务板">
