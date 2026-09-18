@@ -3,7 +3,7 @@ import { chromium } from 'playwright';
 const cat = process.argv[2] ?? 'ground';
 const BASE = process.env.SHOT_BASE ?? 'http://localhost:4173/';
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', headless: true });
-const ctx = await browser.newContext({ viewport: { width: 760, height: 1200 }, deviceScaleFactor: 1, locale: 'zh-CN' });
+const ctx = await browser.newContext({ viewport: { width: cat === 'buildings' ? 1400 : 760, height: 1200 }, deviceScaleFactor: 1, locale: 'zh-CN' });
 const page = await ctx.newPage();
 page.on('pageerror', (e) => console.error('pageerror', e.message));
 const shotEl = async (sel, file) => {
@@ -12,6 +12,22 @@ const shotEl = async (sel, file) => {
   await page.locator(sel).screenshot({ path: `shots/${file}` });
   console.log('wrote', file);
 };
+if (cat === 'buildings') {
+  await page.goto(`${BASE}#/preview?tab=buildings&scale=3&shot=1&anim=0`);
+  await page.reload();
+  await page.waitForSelector('[data-shot="lineup"]');
+  await page.waitForTimeout(400);
+  const blocks = await page.locator('[data-shot^="b-"]').all();
+  for (const el of blocks) {
+    const key = (await el.getAttribute('data-shot')).slice(2);
+    await el.screenshot({ path: `shots/art-b-${key}.png` });
+    console.log('wrote', `art-b-${key}.png`);
+  }
+  await page.locator('[data-shot="lineup"]').screenshot({ path: 'shots/art-b-lineup.png' });
+  console.log('wrote art-b-lineup.png');
+  await browser.close();
+  process.exit(0);
+}
 await page.goto(`${BASE}#/preview?tab=palette&shot=1`);
 await shotEl('[data-shot="palette"]', `art-palette.png`);
 await page.goto(`${BASE}#/preview?tab=${cat}&season=spring&scale=1&shot=1&anim=0`);

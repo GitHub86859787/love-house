@@ -4,6 +4,7 @@ import { ALL_COLORS, COLOR_SET, FAMILIES } from './palette';
 import { demoLayout, groundDemo, groundSheet, jaggedProfile } from './sprites/ground';
 import { waterAnimStrip, waterDemo, waterSheet } from './sprites/water';
 import { floraDemo, floraSheet, treeSprite, treeStrip } from './sprites/flora';
+import { BUILDINGS } from './sprites/buildings';
 import { hash2, TILE } from './sprites/tile';
 
 function colorsOf(g: Grid): Set<string> {
@@ -161,4 +162,17 @@ describe('植被与小物只用调色板颜色', () => {
     for (let i = 2; i < widths.length; i++) if (Math.sign(widths[i] - widths[i - 1]) !== Math.sign(widths[i - 1] - widths[i - 2]) && widths[i] !== widths[i - 1]) turns++;
     expect(turns).toBeGreaterThanOrEqual(3);
   });
+});
+
+describe('九处建筑只用调色板颜色', () => {
+  for (const b of BUILDINGS) {
+    it(b.label, () => {
+      for (const season of ['spring', 'autumn', 'winter'] as const) for (const night of [false, true]) {
+        const g = b.draw(season, night, 0);
+        expect(g.w).toBe(b.w);
+        expect(g.h).toBe(b.h);
+        for (const c of colorsOf(g)) expect(COLOR_SET.has(c), `${b.key} ${season} ${night ? '夜' : '昼'} 有调色板外颜色 ${c}`).toBe(true);
+      }
+    });
+  }
 });

@@ -12,8 +12,9 @@ import { FAMILIES, SEASON_RAMPS } from '../palette';
 import { groundDemo, groundSheet } from '../sprites/ground';
 import { WATER_FRAMES, waterAnimStrip, waterDemo, waterSheet } from '../sprites/water';
 import { floraDemo, floraSheet, treeStrip } from '../sprites/flora';
-import { oldHouseSprite, smokeSprite, OLDHOUSE_H, OLDHOUSE_W } from '../sprites/buildings/oldhouse';
-import { grassAt } from '../sprites/ground';
+import { smokeSprite } from '../sprites/buildings/oldhouse';
+import { BUILDINGS, type BuildingDef } from '../sprites/buildings';
+import { grassAt, stoneTile } from '../sprites/ground';
 import { TILE } from '../sprites/tile';
 import styles from './PreviewPage.module.css';
 
@@ -249,35 +250,61 @@ function FloraSheet({ season, scale, frame }: { season: Season; scale: Scale; fr
   );
 }
 
-/** 把一栋房子放在春天草地上看（含烟，烟囱四季都冒） */
-function houseOnGrass(season: Season, night: boolean, frame: number): Grid {
-  const cols = 7;
-  const rows = 9;
+/** 把一栋建筑放在春天草地上看（有烟囱的冒烟）；广场铺石板地 */
+function onGround(b: BuildingDef, season: Season, night: boolean, frame: number): Grid {
+  const cols = Math.ceil(b.w / TILE) + 1;
+  const rows = Math.ceil(b.h / TILE) + 2;
   const g = new Grid(cols * TILE, rows * TILE);
-  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) g.compose(grassAt('spring', x + 30, y + 30), x * TILE, y * TILE);
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) g.compose(b.key === 'plaza' ? stoneTile(season, x, y) : grassAt(season, x + 30, y + 30), x * TILE, y * TILE);
   const ox = 8;
   const oy = 16;
-  g.compose(oldHouseSprite(season, night, frame), ox, oy);
-  g.compose(smokeSprite(frame), ox + 64, oy - 14);
+  g.compose(b.draw(season, night, frame), ox, oy);
+  if (b.smoke) g.compose(smokeSprite(frame), ox + b.smoke[0], oy + b.smoke[1]);
+  return g;
+}
+
+/** 九栋按 1× 排成一行，看放在一个村里协不协调 */
+function lineup(frame: number): Grid {
+  const gap = 8;
+  const totalW = BUILDINGS.reduce((n, b) => n + b.w + gap, gap);
+  const maxH = Math.max(...BUILDINGS.map((b) => b.h)) + 24;
+  const g = new Grid(totalW, maxH);
+  const cols = Math.ceil(totalW / TILE);
+  const rows = Math.ceil(maxH / TILE);
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) g.compose(grassAt('spring', x + 40, y + 40), x * TILE, y * TILE);
+  let x = gap;
+  for (const b of BUILDINGS) {
+    const y = maxH - 8 - b.h;
+    g.compose(b.draw('spring', false, frame), x, y);
+    if (b.smoke) g.compose(smokeSprite(frame), x + b.smoke[0], y + b.smoke[1]);
+    x += b.w + gap;
+  }
   return g;
 }
 
 function BuildingSheet({ scale, frame }: { season: Season; scale: Scale; frame: number }) {
-  const day = useMemo(() => houseOnGrass('spring', false, frame), [frame]);
-  const dusk = useMemo(() => houseOnGrass('autumn', true, frame), [frame]);
-  void OLDHOUSE_W;
-  void OLDHOUSE_H;
+  const all = useMemo(() => BUILDINGS.map((b) => ({ b, day: onGround(b, 'spring', false, frame), dusk: onGround(b, 'autumn', true, frame) })), [frame]);
+  const row = useMemo(() => lineup(frame), [frame]);
   return (
     <div className={styles.sheet} data-shot="sheet">
-      <p className={styles.note}>建筑 · 老宅 · {scale}× · 左：春天白天 / 右：秋天傍晚亮灯（整体换色表在第 6 类，这里只亮窗和灯）</p>
-      <div className={styles.demo} data-shot="extra" style={{ display: 'flex', gap: 12 }}>
-        <Px grid={day} scale={scale} title="春 白天" />
-        <Px grid={dusk} scale={scale} title="秋 傍晚" />
+      <p className={styles.note}>建筑 · {scale}× · 每栋左春天白天 / 右秋天傍晚亮灯（整体换色表在第 6 类）。底部：九栋 1× 排在一起。</p>
+      {all.map(({ b, day, dusk }) => (
+        <div key={b.key}>
+          <p className={styles.note}>
+            {b.label} · {b.w / TILE}×{b.h / TILE} tile
+          </p>
+          <div className={styles.demo} data-shot={`b-${b.key}`} style={{ display: 'flex', gap: 12 }}>
+            <Px grid={day} scale={scale} title="春 白天" />
+            <Px grid={dusk} scale={scale} title="秋 傍晚" />
+          </div>
+        </div>
+      ))}
+      <p className={styles.note}>九栋 1× 并排（春天白天）</p>
+      <div className={styles.demo} data-shot="lineup">
+        <Px grid={row} scale={1} />
       </div>
-      <p className={styles.note}>1× 自检</p>
-      <div className={styles.demo} style={{ display: 'flex', gap: 12 }}>
-        <Px grid={day} scale={1} />
-        <Px grid={dusk} scale={1} />
+      <div className={styles.demo}>
+        <Px grid={row} scale={2} />
       </div>
     </div>
   );
