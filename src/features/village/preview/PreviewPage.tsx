@@ -6,7 +6,6 @@ import { Button } from '@/ui/Button';
 import { Tabs } from '@/ui/Tabs';
 import { Select } from '@/ui/Field';
 import { Grid } from '@/pixel/painter';
-import { gridToDataURL } from '@/pixel/render';
 import { currentSeason, type Season } from '@/lib/season';
 import { FAMILIES, SEASON_RAMPS } from '../palette';
 import { groundDemo, groundSheet } from '../sprites/ground';
@@ -16,15 +15,18 @@ import { smokeSprite } from '../sprites/buildings/oldhouse';
 import { BUILDINGS, type BuildingDef } from '../sprites/buildings';
 import { grassAt, stoneTile } from '../sprites/ground';
 import { TILE } from '../sprites/tile';
+import { Px } from './Px';
+import { CharSheet } from './CharSheet';
 import styles from './PreviewPage.module.css';
 
-type Tab = 'palette' | 'ground' | 'water' | 'flora' | 'buildings';
+type Tab = 'palette' | 'ground' | 'water' | 'flora' | 'buildings' | 'chars';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'palette', label: '色卡' },
   { key: 'ground', label: '1 地面' },
   { key: 'water', label: '2 水系' },
   { key: 'flora', label: '3 植被小物' },
   { key: 'buildings', label: '4 建筑' },
+  { key: 'chars', label: '5 角色' },
 ];
 const SEASONS: { key: Season; label: string }[] = [
   { key: 'spring', label: '春' },
@@ -32,12 +34,6 @@ const SEASONS: { key: Season; label: string }[] = [
   { key: 'autumn', label: '秋' },
   { key: 'winter', label: '冬' },
 ];
-
-/** 把 Grid 画成 <img>，scale 为整数倍 */
-function Px({ grid, scale, title }: { grid: Grid; scale: number; title?: string }) {
-  const src = useMemo(() => gridToDataURL(grid), [grid]);
-  return <img src={src} width={grid.w * scale} height={grid.h * scale} alt={title ?? ''} title={title} className={styles.px} draggable={false} />;
-}
 
 type Scale = 1 | 3;
 
@@ -50,10 +46,10 @@ export function PreviewPage() {
   const [scale, setScale] = useState<Scale>(params.get('scale') === '1' ? 1 : 3);
   const [frame, setFrame] = useState(Number(params.get('frame') ?? 0));
   const [animate, setAnimate] = useState(params.get('anim') !== '0');
-  // 8 fps 逻辑帧：水面三帧循环
+  // 8 fps 逻辑帧：0..11 循环（水 3 帧、树 2 帧、人 4 帧各自取模）
   useEffect(() => {
     if (!animate) return;
-    const t = window.setInterval(() => setFrame((f) => (f + 1) % WATER_FRAMES), 250);
+    const t = window.setInterval(() => setFrame((f) => (f + 1) % 12), 250);
     return () => window.clearInterval(t);
   }, [animate]);
   const s: Season = season === 'auto' ? currentSeason() : season;
@@ -95,6 +91,7 @@ export function PreviewPage() {
         {tab === 'palette' && <PaletteCard season={s} />}
         {tab === 'ground' && <GroundSheet season={s} scale={scale} />}
         {tab === 'buildings' && <BuildingSheet season={s} scale={scale} frame={frame} />}
+        {tab === 'chars' && <CharSheet scale={scale} frame={frame} />}
         {tab === 'flora' && <FloraSheet season={s} scale={scale} frame={frame} />}
         {tab === 'water' && <WaterSheet season={s} scale={scale} frame={frame} animate={animate} onToggle={() => setAnimate((a) => !a)} />}
       </Panel>
