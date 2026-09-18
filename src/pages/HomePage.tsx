@@ -8,7 +8,7 @@ import { Panel } from '@/ui/Panel';
 import { TaskBoard } from '@/features/quests/TaskBoard';
 import { Tutorial } from '@/features/tutorial/Tutorial';
 import { Button } from '@/ui/Button';
-import { VillageScene } from '@/features/persons/VillageScene';
+import { VillageCanvas } from '@/features/village/VillageCanvas';
 import { buildVillageModel } from '@/features/village/model';
 import { PersonCard } from '@/features/persons/PersonCard';
 import { currentSeason } from '@/lib/season';
@@ -30,7 +30,7 @@ export function HomePage() {
     <Page>
       <PageHeader title="人情村" subtitle={dateText} />
 
-      <VillageScene model={model} />
+      <VillageCanvas model={model} bleed />
 
       <Tutorial />
 

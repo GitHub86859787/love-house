@@ -18,9 +18,10 @@ import { TILE } from '../sprites/tile';
 import { Px } from './Px';
 import { CharSheet } from './CharSheet';
 import { LightSheet } from './LightSheet';
+import { VillageSheet } from './VillageSheet';
 import styles from './PreviewPage.module.css';
 
-type Tab = 'palette' | 'ground' | 'water' | 'flora' | 'buildings' | 'chars' | 'light';
+type Tab = 'palette' | 'ground' | 'water' | 'flora' | 'buildings' | 'chars' | 'light' | 'village';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'palette', label: '色卡' },
   { key: 'ground', label: '1 地面' },
@@ -29,6 +30,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'buildings', label: '4 建筑' },
   { key: 'chars', label: '5 角色' },
   { key: 'light', label: '6 昼夜' },
+  { key: 'village', label: '7 场景' },
 ];
 const SEASONS: { key: Season; label: string }[] = [
   { key: 'spring', label: '春' },
@@ -95,6 +97,7 @@ export function PreviewPage() {
         {tab === 'buildings' && <BuildingSheet season={s} scale={scale} frame={frame} />}
         {tab === 'chars' && <CharSheet scale={scale} frame={frame} />}
         {tab === 'light' && <LightSheet scale={scale} frame={frame} />}
+        {tab === 'village' && <VillageSheet season={s} scale={scale} animate={animate} frame={frame} slotParam={params.get('slot')} debugParam={params.get('debug')} />}
         {tab === 'flora' && <FloraSheet season={s} scale={scale} frame={frame} />}
         {tab === 'water' && <WaterSheet season={s} scale={scale} frame={frame} animate={animate} onToggle={() => setAnimate((a) => !a)} />}
       </Panel>

@@ -1,0 +1,193 @@
+.frame {
+  position: relative;
+  border: 4px solid var(--wood-dark);
+  box-shadow: inset 0 0 0 4px var(--wood-light);
+  background: var(--wood-shadow);
+  padding: 4px;
+}
+
+.bleed {
+  margin-left: -12px;
+  margin-right: -12px;
+  border-left-width: 0;
+  border-right-width: 0;
+}
+
+.scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  display: flex;
+  justify-content: center;
+}
+
+.scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.stage {
+  position: relative;
+  flex: none;
+}
+
+.canvas {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.overlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  display: none;
+}
+
+.overlayOn {
+  display: block;
+}
+
+.enterText {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 24px;
+  text-align: center;
+  color: var(--white);
+  font-size: var(--fs-md);
+  text-shadow: 1px 1px 0 var(--ink);
+  animation: enter-text 400ms steps(2) both;
+}
+
+@keyframes enter-text {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.empty {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  text-align: center;
+  font-size: var(--fs-sm);
+  color: var(--white);
+  text-shadow: 1px 1px 0 var(--ink);
+  background: rgba(59, 36, 18, 0.85);
+  padding: 6px 8px;
+  border: 2px solid var(--wood-light);
+}
+
+/* 弹出名单 */
+.panel {
+  position: absolute;
+  width: 200px;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--paper);
+  border: 3px solid var(--wood-dark);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35), inset 0 0 0 2px var(--paper-dark);
+  padding: 6px 8px 8px;
+  z-index: 3;
+  animation: panel-pop 120ms steps(3) both;
+  font-size: var(--fs-sm);
+  color: var(--ink);
+}
+
+.panel::before {
+  content: '';
+  position: absolute;
+  left: var(--arrow-x, 96px);
+  top: -9px;
+  width: 8px;
+  height: 8px;
+  background: var(--paper);
+  border-left: 3px solid var(--wood-dark);
+  border-top: 3px solid var(--wood-dark);
+  transform: rotate(45deg);
+}
+
+@keyframes panel-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.panelHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.panelTitle {
+  font-size: var(--fs-md);
+  font-weight: normal;
+  margin: 0;
+}
+
+.panelSub {
+  color: var(--ink-soft);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px;
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+
+.row:hover,
+.row:active {
+  background: var(--paper-dark);
+  border-color: var(--paper-deep);
+}
+
+.rowName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hearts {
+  display: flex;
+  gap: 1px;
+}
+
+.panelEmpty {
+  color: var(--ink-soft);
+  padding: 4px;
+}
+
+.panelBtn {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px;
+  font: inherit;
+  background: var(--gold);
+  border: 2px solid var(--gold-dark);
+  color: var(--ink);
+  cursor: pointer;
+}
